@@ -14,7 +14,7 @@ export const IMG = {
 // 데빌헌터 (현재 시뮬레이터의 유일한 유닛)
 // 아이템 레벨 해금: 1700 권총(잔혹한 추적자) + 퀵 샷 / 1730 트라이포드 / 1750 건 스탠스(샷건 연사·라이플) / 1770 각성기
 export const DH = {
-  name: '데빌헌터',
+  name: '데빌헌터', rarity: 4, // 클래스는 모두 희귀도 4
   base: { hp: 1800, atk: 125, crit: 0.15, critDmg: 2.0, speed: 3.4 }, // 원거리 딜러 · 희귀도 4 기준 (밸런싱 표 참고)
   // 권총: 잔혹한 추적자 기본 2구간(01 → 02)을 한 번의 기본 공격으로 끝까지 재생. 구간별 1발씩.
   pistol: { range: 6.5, segs: [ { clip: 'sk_brutalchaser_01', dur: 1.0, hits: [[0.27, 1.0]] }, { clip: 'sk_brutalchaser_02', dur: 1.233, hits: [[0.33, 1.15]] } ], mana: 12 },
@@ -46,7 +46,7 @@ export function tierOf(ilvl) {
 // 기본 공격 판정은 초당 1회(노트 규칙). 모션은 원본 속도로 끝까지 재생하고, 그 사이에 1초 간격으로 판정이 들어간다.
 // 체력·공격력·사거리·종말의 날 계수는 노트에 없어 임시값.
 export const SR = {
-  name: '소서리스', dmgType: 'mag', // 마법 공격력 사용 (atk = 마법 공격력)
+  name: '소서리스', rarity: 4, dmgType: 'mag', // 마법 공격력 사용 (atk = 마법 공격력)
   base: { hp: 1800, atk: 125, crit: 0.15, critDmg: 2.0, speed: 3.0 }, // 원거리 딜러 · 희귀도 4 기준
   mana: 50, manaPerHit: 5, rangeCells: 4,                               // 사거리 임시
   basic: { segs: [ { clip: 'sk_unleashedenergy_01', dur: 1.7, hits: [[0.6, 1], [1.6, 1]] }, { clip: 'sk_unleashedenergy_02', dur: 1.933, hits: [[0.8, 1], [1.8, 1]] } ] },
@@ -85,7 +85,7 @@ export const SHANA = {
 // 기본 공격 = att_battle_1_01(1.1초, 1타) / 스킬 = 수라결(시작 → 연타 8회 → 마무리, 약 6.2초)
 // 1750 아이덴티티 = 징벌의 파도: 기본 공격 적중·수라결 사용으로 게이지 충전 → 100%면 다음 행동이 징벌의 파도(전방 직선 5타)
 export const BK = {
-  name: '브레이커',
+  name: '브레이커', rarity: 4,
   base: { hp: 2600, atk: 100, crit: 0.15, critDmg: 2.0, speed: 3.6 }, // 근접 딜러 · 희귀도 4 기준
   mana: 30, manaPerHit: 5, rangeCells: 1, // 마나 = 징벌의 파도(1730), 수라결은 별도 수라결 게이지(100)
   basic: { segs: [ { clip: 'att_battle_1_01', dur: 1.1, hits: [[0.45, 1]] } ] },
@@ -110,7 +110,7 @@ export const BK_TIERS = [
 // 1730: 스킬 사용 시마다 체력이 가장 낮은 아군 위치에 절실한 구원 장판 (4초간 장판 안 아군 회복)
 // 1770: 절실한 구원 3회째마다 용맹의 세레나데 (아군 전체 공격력 증가). 수치는 임시값
 export const BARD = {
-  name: '바드', dmgType: 'mag',
+  name: '바드', rarity: 4, dmgType: 'mag',
   base: { hp: 1900, atk: 100, crit: 0.1, critDmg: 1.8, speed: 3.1 }, // 서포터 · 희귀도 4 기준
   mana: 40, manaPerHit: 8, rangeCells: 4,
   basic: { name: '사운드 쇼크', segs: [ { clip: 'sk_soundshock', dur: 1.46, hits: [[0.5, 1.3]] } ] },

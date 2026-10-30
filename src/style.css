@@ -48,7 +48,7 @@ button { font-family: inherit; }
 .note { font-size: 12px; color: var(--dim); line-height: 1.5; }
 
 /* 지도 */
-.mapscr { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 14px; gap: 10px; background: radial-gradient(#2a1d16, #120f0d); }
+.mapscr { --dps: clamp(80px, 24vw, 140px); position: absolute; inset: 0; display: flex; flex-direction: column; padding: 14px; gap: 10px; background: radial-gradient(#2a1d16, #120f0d); }
 .mhead { border: 1px solid var(--acc); border-radius: 6px; padding: 9px; text-align: center; background: #1b120d; }
 .fl { color: #ffb48a; font-size: 19px; font-weight: 700; }
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; padding: 10px; border: 1px solid #5a3a26; border-radius: 8px; background: #1a1411; }
@@ -502,3 +502,28 @@ button.li { cursor: pointer; } button.li:hover:not(:disabled) { background: #332
 .vic-go:disabled { opacity: .45; }
 .uinfo .us.lock { opacity: .55; filter: grayscale(1); } .uinfo .us.lock .ust { color: #9aa3b5; } .uinfo .lk { font-style: normal; font-size: 10px; font-weight: 700; color: #c7ccd6; background: #ffffff1a; border: 1px solid #ffffff30; border-radius: 3px; padding: 0 4px; margin-left: 4px; }
 .uinfo .ur.syn b { color: #7ee08a; }
+/* 지도 십자 패드 (2026-10-31) */
+.dpad { --s: var(--dps); align-self: center; display: grid; grid-template-columns: repeat(3, var(--s)); grid-template-rows: repeat(3, var(--s)); gap: calc(var(--s) * 0.08); margin: 6px auto; touch-action: manipulation; } /* 모바일 기준 큰 버튼 (화면 폭·높이에 맞춰 80~140px) */
+.dp { border-radius: 16px; border: 2px solid #c98a4a; background: linear-gradient(#3a2a20, #24180f); color: #ffd9a8; font-size: calc(var(--s) * 0.38); cursor: pointer; box-shadow: 0 3px 0 #120b06, inset 0 1px 0 #ffffff20; -webkit-tap-highlight-color: transparent; user-select: none; }
+.dp:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #120b06; background: linear-gradient(#5a3a24, #3a2414); }
+.dp:disabled { opacity: .25; cursor: default; }
+.dp-u { grid-area: 1 / 2; } .dp-l { grid-area: 2 / 1; } .dp-r { grid-area: 2 / 3; } .dp-d { grid-area: 3 / 2; }
+.dp-c { grid-area: 2 / 2; border-radius: 50%; border: 1px solid #c98a4a55; background: radial-gradient(#3a2a20, #1a120c); box-shadow: none; cursor: default; }
+/* 십자 패드를 크게 두고, 남는 높이에 맞춰 지도 크기를 줄인다 (모바일 기준) */
+.mapscr .grid { align-self: center; box-sizing: border-box; width: 100%; flex: none; } /* 폭은 fitMap()이 남는 높이에 맞춰 정함 */
+.mbtns .giveb { font-size: 14px; font-weight: 700; padding: 10px 16px; background: #1a1414; border: 1px solid #8a5a5a; color: #d9a8a8; }
+.btn.danger { background: linear-gradient(#a23a32, #6a1e1a); border-color: #ff9a8a; }
+/* 좁은 화면: 지도 칸 글씨·하단 버튼 줄바꿈 방지 */
+.mapscr .grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.mapscr .gc { font-size: var(--gcf, 12px); line-height: 1.1; text-align: center; overflow: hidden; word-break: keep-all; }
+.mapscr .wtbtn { white-space: nowrap; font-size: clamp(13px, 3.8vw, 17px); }
+.mapscr .mbtns { display: flex; flex-wrap: nowrap; justify-content: center; gap: 6px; }
+.mapscr .mbtns .btn { white-space: nowrap; }
+@media (max-width: 480px) { .mapscr .mbtns .btn { font-size: 12px; padding: 8px 10px; } .mbtns .exitb { min-width: 0; font-size: 14px; padding: 8px 14px; } }
+/* 균열 입장: 이어하기 / 새로 시작 (2026-10-31) — 두 버튼 같은 크기, 새로 시작도 또렷하게 */
+.title .cont, .title #go.newrun { min-width: 240px; }
+.title #go.newrun { display: flex; flex-direction: column; align-items: center; gap: 2px; background: linear-gradient(#3a4a66, #24304a); border: 1px solid #9fb6e0; color: #fff; box-shadow: 0 3px 10px #0008; }
+.title #go.newrun small { font-size: 12px; font-weight: 400; color: #c8d4ec; }
+.title #go.newrun:hover { background: linear-gradient(#4a5d80, #2d3b5a); }
+.title #go.newrun.warn { background: linear-gradient(#8a3a32, #5a1e1a); border-color: #ff9a8a; }
+.title #go.newrun.warn small { color: #ffd0c8; }

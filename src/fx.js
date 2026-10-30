@@ -342,6 +342,27 @@ export const FXDEF = {
   ],
   fire_ember: { tex: 'fx_a_fragment_007', sub: [4, 2], frame: 'random', count: 1, life: [0.5, 0.9], size: [0.08, 0.14], vel: [[-0.3, 1.0, -0.3], [0.3, 2.2, 0.3]], color: [1, 0.5, 0.15], alpha: [0, 1, 0], add: true },
   // 아만
+  // 아제나 · 이난나 기본 공격 투사체 (2026-10-31)
+  az_cast: { tex: 'fx_e_glow_001', count: 1, life: 0.25, size: [0.9, 1.1], color: [1, 0.45, 0.2], alpha: [1, 0], add: true },
+  az_bolt_head: [
+    { tex: 'fx_e_glow_001', count: 1, size: [0.8, 0.8], color: [1, 0.35, 0.12], alpha: 1, add: true },
+    { tex: 'fx_f_star_001', count: 1, size: [0.45, 0.45], color: [1, 0.85, 0.6], alpha: 0.9, add: true },
+  ],
+  az_bolt_trail: { tex: 'fx_e_glow_001', count: 1, life: [0.15, 0.3], size: [0.35, 0.55], color: [1, 0.4, 0.12], alpha: [0.8, 0], add: true },
+  az_bolt_hit: [
+    { tex: 'fx_f_star_001', count: 1, life: 0.25, size: [1.2, 1.4], color: [1, 0.55, 0.25], alpha: [1, 0], add: true },
+    { tex: 'fx_a_fragment_007', sub: [4, 2], frame: 'random', count: 7, life: [0.2, 0.45], size: [0.08, 0.14], stretch: 3, align: 'vel', vel: [[-3, 0, -3], [3, 4, 3]], color: [1, 0.5, 0.15], alpha: [1, 0], add: true },
+  ],
+  in_cast: { tex: 'fx_e_glow_001', count: 1, life: 0.25, size: [0.9, 1.1], color: [1, 0.9, 0.45], alpha: [1, 0], add: true },
+  in_bolt_head: [
+    { tex: 'fx_e_glow_001', count: 1, size: [0.75, 0.75], color: [1, 0.85, 0.35], alpha: 1, add: true },
+    { tex: 'fx_f_star_001', count: 1, size: [0.5, 0.5], color: [1, 1, 0.85], alpha: 0.9, add: true },
+  ],
+  in_bolt_trail: { tex: 'fx_e_glow_001', count: 1, life: [0.15, 0.3], size: [0.35, 0.5], color: [1, 0.85, 0.35], alpha: [0.7, 0], add: true },
+  in_bolt_hit: [
+    { tex: 'fx_f_star_001', count: 1, life: 0.25, size: [1.2, 1.4], color: [1, 0.92, 0.6], alpha: [1, 0], add: true },
+    { tex: 'fx_a_fragment_007', sub: [4, 2], frame: 'random', count: 6, life: [0.2, 0.4], size: [0.08, 0.14], stretch: 3, align: 'vel', vel: [[-3, 0, -3], [3, 4, 3]], color: [1, 0.88, 0.45], alpha: [1, 0], add: true },
+  ],
   am_cast: { tex: 'fx_e_glow_001', count: 1, life: 0.25, size: [0.9, 1.1], color: [0.8, 0.9, 1], alpha: [1, 0], add: true },
   am_cast_big: [
     { tex: 'fx_c_glow_008', sub: [1, 2], frame: 0, count: 1, life: 0.5, size: [4, 4], color: [0.85, 0.92, 1], alpha: [1, 0], add: true, off: [0, 1.8, 0] },

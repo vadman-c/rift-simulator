@@ -32,6 +32,13 @@ function resumeRun(d) {
   toast(`${run.floor}층에서 이어합니다`, '#7ee08a');
   showMap();
 }
+// 지도에서 [포기하기]: 이번 런을 끝내고(저장 삭제) 점수 정산 화면으로. 전투 중에는 버튼이 없다
+function giveUpRift() {
+  const m = modal(`<div class="mt">균열을 포기할까요?</div><div class="ms">이번 진행(${run.floor}층)을 끝내고 지금까지의 점수로 정산합니다.<br><b style="color:#ff9a8a">저장된 진행도 지워지며 되돌릴 수 없습니다.</b></div>
+    <div class="mrow"><button class="btn danger" id="y">포기하기</button><button class="btn ghost" id="n">계속하기</button></div>`);
+  $('#y', m).onclick = () => { closeModal(); view.clear(); battle = null; gameOver(false, true); };
+  $('#n', m).onclick = closeModal;
+}
 // 지도에서 [나가기]: 진행을 저장하고 일반 상태(필드)로. 전투 중에는 버튼이 없다
 function exitRift() {
   const m = modal(`<div class="mt">차원의 균열에서 나갈까요?</div><div class="ms">지금까지의 진행(${run.floor}층 · 파티 ${run.units.length}명 · 장비 · 재화)을 저장하고 필드로 나갑니다.<br>낙원 → 차원의 균열에서 <b>이어하기</b>로 돌아올 수 있습니다.</div>
@@ -297,7 +304,7 @@ function riftSetup() {
       <div class="note">현재 범위: <b>1~3층</b></div>
     </div>
     ${saved ? `<button class="btn big cont" id="cont">이어하기 <small>${UNITS[saved.run.main]?.name || ''} · ${saved.run.floor}층 · Lv.${saved.run.units[0].level} · 파티 ${saved.run.units.length}명</small></button>` : ''}
-    <button class="btn big${saved ? ' ghost' : ''}" id="go" ${t === 0 ? 'disabled' : ''}>${saved ? '새로 시작' : '균열 입장'}</button>
+    <button class="btn big${saved ? ' newrun' : ''}" id="go" ${t === 0 ? 'disabled' : ''}>${saved ? '새로 시작<small>저장된 진행은 지워집니다</small>' : '균열 입장'}</button>
     <div class="codex" id="cdx"></div>
   </div>`);
   screen.appendChild(s);
@@ -306,7 +313,7 @@ function riftSetup() {
   $('#chg').onclick = charSelect;
   if (saved) $('#cont').onclick = () => resumeRun(saved);
   $('#go').onclick = () => {
-    if (saved && !$('#go').dataset.ok) { $('#go').dataset.ok = 1; $('#go').textContent = '저장된 진행을 지우고 새로 시작'; toast('한 번 더 누르면 저장된 진행이 지워집니다', '#ffb84a'); return; }
+    if (saved && !$('#go').dataset.ok) { $('#go').dataset.ok = 1; $('#go').classList.add('warn'); $('#go').innerHTML = '한 번 더 누르면 새로 시작<small>저장된 진행이 지워집니다</small>'; toast('한 번 더 누르면 저장된 진행이 지워집니다', '#ffb84a'); return; }
     clearSave(); saveProfile();
     run = G.newRun({ main: sel, roster: { ...roster }, asc: 0, meta: M.metaBonus(M.loadMeta()), esther: !!P.esther[sel] });
     codexMark('units', sel);
@@ -343,7 +350,7 @@ function accCard(a) {
 }
 function codexCard(k) {
   const U = UNITS[k], D = G.unitDef(k), mag = (U.dmg || '물리') === '마법';
-  const rar = U.cls ? '원정대 클래스' : '★'.repeat(D.rarity || 3) + ` <small>희귀도 ${D.rarity || 3}</small>`;
+  const rar = `<span style="color:${RARITY_COL[D.rarity || 3]}">${'★'.repeat(D.rarity || 3)}</span> <small>희귀도 ${D.rarity || 3}${U.cls ? ' · 원정대 클래스' : ''}</small>`;
   const col = U.cls ? '#e9b84a' : RARITY_COL[D.rarity || 3];
   const B = D.base, stats = [['체력', B.hp.toLocaleString()], [mag ? '마법 공격력' : '공격력', B.atk], ['마나', U.kind === 'dh' ? '없음 (스탠스 순환)' : D.mana], ['사거리', `${D.rangeCells ?? 4}칸`]];
   const skills = [];
@@ -371,10 +378,11 @@ function showMap() {
     <div class="mhead"><div class="fl">차원의 균열 ${f}층 · ${FLOOR_ZONE(f)}</div></div>
     <div class="grid" id="grid"></div>
     <div class="msg" id="mmsg">방향키 또는 인접한 칸을 눌러 이동하세요</div>
+    <div class="dpad" id="dpad">${[['u', '▲', -1, 0], ['l', '◀', 0, -1], ['r', '▶', 0, 1], ['d', '▼', 1, 0]].map(([k, ic, dr, dc]) => `<button class="dp dp-${k}" data-dr="${dr}" data-dc="${dc}" ${G.canMove(m, m.pos.r + dr, m.pos.c + dc) ? '' : 'disabled'} aria-label="이동">${ic}</button>`).join('')}<span class="dp dp-c"></span></div>
     ${m.grid[m.pos.r][m.pos.c]?.type === 'shop' ? '<button class="btn shopin" id="shopin">🛒 상점 들어가기 <kbd>E</kbd></button>' : ''}
     <div class="mfoot">
       <button class="btn big wtbtn" id="wt">⚔ 대기 단계로 돌아가기 · 장비 정비</button>
-      <div class="mbtns"><button class="btn sm" id="info">균열 정보</button><button class="btn sm ghost" id="dev">개발자</button><button class="btn exitb" id="exit">⇦ 나가기</button></div>
+      <div class="mbtns"><button class="btn sm" id="info">균열 정보</button><button class="btn sm ghost" id="dev">개발자</button><button class="btn exitb" id="exit">⇦ 나가기</button><button class="btn giveb" id="giveup">포기하기</button></div>
     </div></div>`);
   screen.appendChild(el);
   const grid = $('#grid', el);
@@ -399,14 +407,37 @@ function showMap() {
     grid.appendChild(d);
   }
   $('#info', el).onclick = infoPanel;
+  // 터치 십자 패드: 누르면 그 방향 인접 칸으로 이동 (막힌 방향은 꺼짐)
+  el.querySelectorAll('.dpad button').forEach(b => b.onclick = () => { const r = m.pos.r + +b.dataset.dr, c = m.pos.c + +b.dataset.dc; if (G.canMove(m, r, c)) moveTo(r, c); });
   if ($('#shopin', el)) $('#shopin', el).onclick = () => { if (!mapMoving) shopRoom(); };
   $('#dev', el).onclick = devPanel;
   $('#exit', el).onclick = () => { if (!mapMoving) exitRift(); };
+  $('#giveup', el).onclick = () => { if (!mapMoving) giveUpRift(); };
   $('#wt', el).onclick = waitPhase;
   mapMoving = false;
+  fitMap(el);
   view.showMapChar(UNITS[run.main].kind);
   requestAnimationFrame(placeMapChar);
   flushUnlocks();
+}
+// 모바일 기준: 십자 패드는 크게, 남는 높이에 맞춰 지도(7×7) 크기를 줄인다. 그래도 모자라면 패드를 조금 줄인다
+function fitMap(el) {
+  const g = $('#grid', el); if (!g) return;
+  el.style.removeProperty('--dps'); g.style.width = '';
+  const W = el.clientWidth - 28;
+  for (let k = 0; k < 6; k++) {
+    const others = [...el.children].filter(c => c !== g).reduce((a, c) => a + c.getBoundingClientRect().height, 0);
+    const avail = el.clientHeight - 28 - 10 * (el.children.length - 1) - others;
+    if (avail >= 240 || k === 5) {
+      g.style.width = Math.max(200, Math.min(W, avail)) + 'px';
+      const over = el.scrollHeight - el.clientHeight; // 계산 오차로 넘치면 그만큼 더 줄인다
+      if (over > 0) g.style.width = Math.max(200, g.getBoundingClientRect().width - over - 2) + 'px';
+      el.style.setProperty('--gcf', Math.max(8, Math.min(12, (g.getBoundingClientRect().width - 50) / 7 * 0.26)) + 'px'); // 칸 크기에 맞춘 글씨
+      break;
+    }
+    const cur = parseFloat(getComputedStyle(el).getPropertyValue('--dps')) || $('.dp-u', el).getBoundingClientRect().width;
+    el.style.setProperty('--dps', Math.max(64, cur - 10) + 'px');
+  }
 }
 // 지도 칸(r, c)의 발 위치 (캔버스 기준 픽셀)
 function tileFoot(r, c) {
@@ -415,7 +446,7 @@ function tileFoot(r, c) {
   return { x: a.left - b.left + a.width / 2, y: a.top - b.top + a.height * 0.8, size: a.width };
 }
 function placeMapChar() { if (mode !== 'map' || !run?.map) return; const p = tileFoot(run.map.pos.r, run.map.pos.c); if (p) view.setMapCharPos(p.x, p.y, p.size); }
-window.addEventListener('resize', () => { if (mode === 'map') placeMapChar(); });
+window.addEventListener('resize', () => { if (mode === 'map') { fitMap($('.mapscr')); placeMapChar(); } });
 let mapMoving = false;
 // 캐릭터가 다음 칸까지 걸어간 뒤 방에 들어간다
 async function walkTo(r, c) {
@@ -484,8 +515,8 @@ function recruitUI(pool, desc) {
   const info = (k) => {
     const U = UNITS[k], D = G.unitDef(k), role = U.role.split(' · ')[0];
     const front = D.rangeCells != null && D.rangeCells <= 1;
-    const r = D.rarity || 3; // 희귀도 표시 (2026-10-31 3차): NPC는 ★ 개수 + 색, 클래스는 원정대 클래스
-    return { U, role, dmg: U.dmg || '물리', tier: U.cls ? `원정대 · ${run.roster[k]}` : U.esther ? '에스더' : 'NPC', rar: U.cls ? '' : `<span class="rc-rar" style="color:${RARITY_COL[r]}">${'★'.repeat(r)}<small>희귀도 ${r}</small></span>`, col: U.cls ? '#e9b84a' : RARITY_COL[r] };
+    const r = D.rarity || 3; // 희귀도 표시: ★ 개수 + 색 (클래스는 모두 희귀도 4, 카드 테두리는 금색 유지)
+    return { U, role, dmg: U.dmg || '물리', tier: U.cls ? `원정대 · ${run.roster[k]}` : U.esther ? '에스더' : 'NPC', rar: `<span class="rc-rar" style="color:${RARITY_COL[r]}">${'★'.repeat(r)}<small>희귀도 ${r}</small></span>`, col: U.cls ? '#e9b84a' : RARITY_COL[r] };
   };
   const render = () => {
     const m = modal(`<div class="rc">
@@ -525,7 +556,7 @@ function shopStock(kind) {
     for (let i = 0; i < 2; i++) { const it = G.makeEquip(run, { tier: G.shopEquipTier(run) }); items.push({ k: 'equip', it, name: `${it.tier}티어 ${G.equipName(it)}`, desc: G.equipText(it), img: EQUIP_IMG(it.kind, it.tier), color: TIER_COL[it.tier], p: G.price(run, P.equip[it.tier]) }); }
     return items;
   }
-  return G.recruitCandidates(run, 2).map(k => (codexMark('units', k), { k: 'mate', key: k, name: UNITS[k].name, desc: (UNITS[k].cls ? `원정대 클래스 · 아이템 레벨 ${run.roster[k]} · ` : `NPC · ${'★'.repeat(G.unitDef(k).rarity || 3)} 희귀도 ${G.unitDef(k).rarity || 3} · `) + UNITS[k].role + ' · ' + (UNITS[k].dmg || '물리'), img: UNITS[k].img, p: G.recruitPrice(run, k) }));
+  return G.recruitCandidates(run, 2).map(k => (codexMark('units', k), { k: 'mate', key: k, name: UNITS[k].name, desc: (UNITS[k].cls ? `원정대 클래스 · ★★★★ 희귀도 4 · 아이템 레벨 ${run.roster[k]} · ` : `NPC · ${'★'.repeat(G.unitDef(k).rarity || 3)} 희귀도 ${G.unitDef(k).rarity || 3} · `) + UNITS[k].role + ' · ' + (UNITS[k].dmg || '물리'), img: UNITS[k].img, p: G.recruitPrice(run, k) }));
 }
 function shopRoom() {
   // 상점은 다시 들를 수 있다: 칸마다 상품을 기억해 두고 재방문하면 그대로 보여준다
@@ -1306,13 +1337,13 @@ function nextFloor() {
   showMap();
 }
 
-function gameOver(cleared) {
+function gameOver(cleared, gaveUp = false) {
   mode = 'over'; view.active = false; hud.innerHTML = ''; clearSave(); // 런이 끝나면 저장 삭제
   const reached = cleared ? G.MAX_FLOOR : run.floor;
   const sc = G.score(run);
   const secs = Math.round((Date.now() - run.startTime) / 1000);
-  const m = modal(`<div class="mt">${cleared ? '차원의 균열 정복!' : '런 종료'}</div>
-    <div class="ms">${cleared ? `${G.MAX_FLOOR}층 부활한 발탄을 처치했습니다.` : `${run.floor}층에서 쓰러졌습니다. 도달한 층까지 보상을 받습니다.`}</div>
+  const m = modal(`<div class="mt">${cleared ? '차원의 균열 정복!' : gaveUp ? '균열 포기' : '런 종료'}</div>
+    <div class="ms">${cleared ? `${G.MAX_FLOOR}층 부활한 발탄을 처치했습니다.` : gaveUp ? `${run.floor}층에서 균열을 포기했습니다. 지금까지의 점수로 정산합니다.` : `${run.floor}층에서 쓰러졌습니다. 도달한 층까지 보상을 받습니다.`}</div>
     <div class="stats">
       <span>도달 층 <b>${reached}</b></span>
       <span>플레이 시간 <b>${Math.floor(secs / 60)}분 ${secs % 60}초</b></span><span>전투 <b>${run.stats.battles}회</b></span>

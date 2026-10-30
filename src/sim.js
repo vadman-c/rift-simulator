@@ -11,7 +11,8 @@ export function cellToPos(side, col, row) {
   const z = (row + 0.5) * CELL + GAP;
   return { x, z: side === 'ally' ? z : -z };
 }
-export const BOUNDS = { x: (COLS / 2) * CELL + 0.6, z: ROWS_SIDE * CELL + GAP + 0.6 };
+// 이동 가능 범위 = 보드 타일 안쪽 (2026-10-31: 예전엔 타일 밖 0.6m까지 나갈 수 있었음 → 타일 가장자리에서 0.35m 안쪽으로 제한)
+export const BOUNDS = { x: (COLS / 2) * CELL - 0.35, z: ROWS_SIDE * CELL + GAP - 0.35 };
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -180,6 +181,7 @@ export class Battle {
     }
 
     this._separate(dt);
+    for (const u of this.units) if (u.alive) { u.x = Math.max(-BOUNDS.x, Math.min(BOUNDS.x, u.x)); u.z = Math.max(-BOUNDS.z, Math.min(BOUNDS.z, u.z)); } // 순간이동·돌진·넉백 뒤에도 타일 밖으로 못 나가게
 
     // 검은 산의 포식자 칼날
     if (this.blades) for (let i = this.blades.length - 1; i >= 0; i--) {
@@ -446,7 +448,7 @@ export class Battle {
           const tt = cur(); if (!tt) return;
           const reach = u.range + (u.rangeBonus || 0) + u.rad + tt.rad + 0.6;
           if (dist(u, tt) > reach) return; // 대상이 사거리 밖으로 벗어나면 빗나감
-          this.ev({ t: 'vfx', kind: { sr: 'sr_energy', federico: 'fed_shot', bd: 'bd_shock', shana: 'shana_hit', bk: 'bk_hit', hidaka: 'hidaka_hit', silian: 'hidaka_hit', aman: 'am_bolt' }[u.kind], from: u.id, to: tt.id });
+          this.ev({ t: 'vfx', kind: { sr: 'sr_energy', federico: 'fed_shot', bd: 'bd_shock', shana: 'shana_hit', bk: 'bk_hit', hidaka: 'hidaka_hit', silian: 'hidaka_hit', aman: 'am_bolt', azena: u.form === 'inanna' ? 'in_bolt' : 'az_bolt' }[u.kind], from: u.id, to: tt.id }); // 아제나 = 붉은 불꽃탄 · 이난나 = 금빛 탄
           this.deal(u, tt, m, {});
           if (u.kind === 'bk') this._idGain(u, D.identity.gaugePerHit);
           if (this.cfg.legacies.has('kadan') && tt.alive) this.deal(u, tt, 0.7 * m, {});

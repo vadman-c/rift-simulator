@@ -1132,6 +1132,13 @@ export class View {
         if (b) F.projectile({ from: m, to: this._hitPos(b), speed: 22, head: 'am_bolt_head', trail: 'am_bolt_trail', trailRate: 50, hit: 'am_bolt_hit', face });
         break;
       }
+      case 'az_bolt': case 'in_bolt': { // 아제나(붉은 불꽃탄) · 이난나(금빛 탄) 기본 공격
+        if (!a) break; const face = a.u.face, B = F.basis(face), p = e.kind === 'az_bolt' ? 'az' : 'in';
+        const m = a.grp.position.clone().addScaledVector(B.f, 0.6).add(new THREE.Vector3(0, 1.5, 0));
+        F.spawn(p + '_cast', m, face, 1);
+        if (b) F.projectile({ from: m, to: this._hitPos(b), speed: 24, head: p + '_bolt_head', trail: p + '_bolt_trail', trailRate: 50, hit: p + '_bolt_hit', face });
+        break;
+      }
       case 'am_ward': this._amanWard(e, a); break;
       case 'am_shield': if (b) F.spawn('am_shield_fx', b.grp.position.clone(), 0, 1); break;
       case 'fed_float': if (a) { a.floatT = e.dur; F.spawn('fed_float_on', a.grp.position.clone(), 0, 1); } break;
