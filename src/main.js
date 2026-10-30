@@ -90,13 +90,13 @@ function equipOption(it) {
 function relicIcon(k, g, cls = '') { return `<span class="ricon rg${g} ${cls}"><img src="${M.RELIC_IMG(k)}" alt=""></span>`; }
 function paradiseOption() {
   const key = G.pick(M.RELIC_KEYS), gr = M.rollGrade(run.floor), D = M.RELIC_DEF[key];
-  return { title: D.name, html: relicIcon(key, gr, 'card'), color: M.GRADE_COL[gr],
+  return { title: D.name, html: relicIcon(key, gr, 'card'), desc: `<span style="color:${M.GRADE_COL[gr]}">${M.GRADES[gr]}</span> 등급 낙원 유물 · ${D.theme}`, color: M.GRADE_COL[gr],
     apply: () => {
       const m = M.loadMeta(), r = M.gainParadise(m, key, gr); run.meta = { ...run.meta, ...M.metaBonus(m) }; (run.paraGot = run.paraGot || []).push({ key, grade: gr }); // 점수 환산용
       toast(r.up ? `${D.name} 등급업 · ${M.GRADES[r.from]} → ${M.GRADES[r.to]}` : `${D.name} · 복원석 +${r.stones}`, M.GRADE_COL[gr]);
     } };
 }
-function expOption(n, sub = '') { return { title: `경험치 +${n}`, desc: run.units.length > 1 ? `파티 인원으로 나눠 1인당 ${Math.round(G.expShare(run, n))}` : sub, color: '#7ec8ff', apply: () => { const up = G.gainExp(run, n); if (up) toast(`레벨 업! Lv.${run.unit.level}`, '#7ee08a'); } }; }
+function expOption(n, sub = '') { return { title: `경험치 +${n}`, html: '<b class="vc-t">EXP</b>', desc: run.units.length > 1 ? `파티 인원으로 나눠 1인당 ${Math.round(G.expShare(run, n))}` : sub, color: '#7ec8ff', apply: () => gainExpUI(n) }; }
 // 장신구 획득 (가방이 가득 차면 재화로)
 function gainAcc(it, why = '') {
   codexMark('accs', A.accId(it));
@@ -115,8 +115,8 @@ function coinOption(n) { return { title: `재화 +${n}`, img: COIN_IMG, color: '
 function unitDesc(k) { return ({
     Sorceress: '스킬: 종말의 날 (적이 가장 많은 3×3칸에 운석)',
     DevilHunter: '기본 공격 횟수로 건 스탠스 순환 (핸드건 → 샷건 → 라이플)',
-    Breaker: '수라결 게이지가 차면 수라결 연타 · 1730부터 마나가 차면 징벌의 파도',
-    Bard: '기본: 사운드 쇼크 / 스킬: 수호의 연주 (아군 전체 보호막) · 1730 절실한 구원 · 1750 용맹의 세레나데',
+    Breaker: '수라결 게이지가 차면 수라결 연타',
+    Bard: '기본: 사운드 쇼크 / 스킬: 수호의 연주 (아군 전체 보호막)',
     Shana: '스킬: 섬광 (가까운 적 4명 베기 후 가장 먼 적 뒤로 순간이동)',
     Lahart: '스킬: 수호의 창 (아군 쪽으로 이동해 범위 안 아군 피해를 대신 받고, 끝나면 받은 피해 일부 반격)',
     Azena: '아제나: 고대의 창 3개 → 이난나로 변신 / 이난나: 세계수로 아군 전체 회복 → 아제나로',
@@ -374,7 +374,7 @@ function showMap() {
     ${m.grid[m.pos.r][m.pos.c]?.type === 'shop' ? '<button class="btn shopin" id="shopin">🛒 상점 들어가기 <kbd>E</kbd></button>' : ''}
     <div class="mfoot">
       <button class="btn big wtbtn" id="wt">⚔ 대기 단계로 돌아가기 · 장비 정비</button>
-      <div class="mbtns"><button class="btn sm" id="info">균열 정보</button><button class="btn sm ghost" id="dev">개발자</button><button class="btn sm ghost exitb" id="exit">나가기</button></div>
+      <div class="mbtns"><button class="btn sm" id="info">균열 정보</button><button class="btn sm ghost" id="dev">개발자</button><button class="btn exitb" id="exit">⇦ 나가기</button></div>
     </div></div>`);
   screen.appendChild(el);
   const grid = $('#grid', el);
@@ -469,7 +469,7 @@ function recruitRoom() {
   if (!pool.length || run.units.length >= G.MAX_PARTY) {
     choose({ title: '동료 영입', sub: run.units.length >= G.MAX_PARTY ? '파티가 가득 찼습니다. 대체 보상을 받습니다.' : '영입할 수 있는 동료 후보가 없습니다. 대체 보상을 받습니다.', skip: null,
       options: [
-        { title: '지혜의 서', sub: '대체 보상', desc: '경험치 +50 (파티 인원으로 나눔)', color: '#2e7d4f', badge: '영입', apply: () => { const up = G.gainExp(run, 50); if (up) toast(`레벨 업! Lv.${run.unit.level}`, '#7ee08a'); } },
+        { title: '지혜의 서', sub: '대체 보상', desc: '경험치 +50 (파티 인원으로 나눔)', color: '#2e7d4f', badge: '영입', apply: () => gainExpUI(50, '지혜의 서') },
         { title: '동료의 응원', sub: '대체 보상', desc: '파티 전원 체력 30% 회복', color: '#2e7d4f', badge: '영입', apply: () => G.healPct(run, 0.3) },
       ], onDone: showMap });
     return;
@@ -714,14 +714,17 @@ function skillInfo(u) {
   const sk = (m) => Math.round(base * m * (1 + (u.skillDmg || 0)) * (u.skillMul || 1)).toLocaleString();
   const pc = (m) => Math.round(m * 100) + '%';
   const L = [];
+  // 잠긴 기능: 4번째 값에 해금 조건 → 우클릭 창에서 회색 + '잠김' 표시
+  const ru = run?.units.find(x => x.key === u.key), ct = ru && UNITS[u.key]?.cls ? G.unitTier(run, ru) : 9;
+  const lockAt = (t) => ct >= t ? null : `${UNITS[u.key].tiers[t - 1]?.ilvl || ''} 또는 균열 Lv.${LEVEL_TIER[t - 1]}`;
   if (u.dh) {
     const P = DH.pistol.segs.map(s => s.hits[0][1]), G = DH.shotgun.hits.map(h => h[1]), R = DH.rifle.hits[0][1];
     L.push(['핸드건 · 잔혹한 추적자', `2발 ${P.map(pc).join(' / ')}`, P.map(n).join(' / ')]);
-    if (u.canShotgun) {
-      L.push(['샷건 · 샷건 연사', `전방 원뿔 4발 ${G.map(pc).join(' / ')}`, G.map(n).join(' / ')]);
-      L.push(['라이플 · 원샷원킬', `1발 ${pc(R)}`, n(R)]);
-      L.push(['스탠스 순환', '핸드건 5회 → 샷건 3회 → 라이플 2회', '']);
-    }
+    const lk = u.canShotgun ? null : lockAt(2);
+    L.push(['스탠스 순환', '핸드건 5회 → 샷건 3회 → 라이플 2회', '', lk]);
+    L.push(['샷건 · 샷건 연사', `전방 원뿔 4발 ${G.map(pc).join(' / ')}`, lk ? '' : G.map(n).join(' / '), lk]);
+    L.push(['라이플 · 원샷원킬', `1발 ${pc(R)}`, lk ? '' : n(R), lk]);
+    L.push(['1750 · 집중 사격', '치명타 피해 +25% · 공격·스킬 속도 +10% (자신)', '', lockAt(3)]);
     return L;
   }
   if (u.def) {
@@ -729,7 +732,8 @@ function skillInfo(u) {
     const hits = D.basic.segs.reduce((a, s) => a + s.hits.length, 0);
     L.push(['기본 공격', `${hits > 1 ? `모션 1회에 ${hits}타, ` : ''}타격당 100%`, n(1)]);
     if (u.kind === 'sr') { L.push([`스킬 · ${S.name}`, `적이 가장 많은 3×3칸에 운석 ${pc(S.mult)}${G.unitTier(run, run.units.find(x => x.key === u.key) || run.unit) >= 2 ? ` (1730: 균열 Lv.${u.level} × 5% 포함)` : ''}`, sk(S.mult)]);
-      if (u.shards) L.push(['1750 · 운석 파편', `종말의 날 후 1·5·7·11시 방향 1.5×1.5칸에 파편 4개 ${pc(S.shards.mult)}`, sk(S.shards.mult) + ' × 4']); }
+      if (lockAt(2)) L.push(['1730 · 종말의 날 강화', '종말의 날 피해 +5% × 균열 레벨', '', lockAt(2)]);
+      L.push(['1750 · 운석 파편', `종말의 날 후 1·5·7·11시 방향 1.5×1.5칸에 파편 4개 ${pc(S.shards.mult)}`, u.shards ? sk(S.shards.mult) + ' × 4' : '', u.shards ? null : lockAt(3)]); }
     if (u.kind === 'shana') L.push([`스킬 · ${S.name}`, `1초 지정 불가 → 가까운 적 최대 ${S.targets}명에게 ${pc(S.mult)} → 가장 먼 적 뒤로 순간이동`, sk(S.mult)]);
     if (u.kind === 'neria') { L.length = 0; L.push(['기본 · 회복', `체력 비율이 가장 낮은 아군 1명을 마법 공격력의 ${pc(D.basic.segs[0].hits[0][1])} 회복 (모션당 2회)`, n(D.basic.segs[0].hits[0][1])], [`스킬 · ${S.name}`, `아군 전체를 마법 공격력의 ${pc(S.mult)} 회복`, sk(S.mult)]); }
     if (u.kind === 'bd') {
@@ -737,17 +741,18 @@ function skillInfo(u) {
       L.length = 0;
       L.push([`기본 · ${D.basic.name}`, `음파 투사체 ${pc(D.basic.segs[0].hits[0][1])} (마법)`, n(D.basic.segs[0].hits[0][1])]);
       L.push([`스킬 · ${S.name}`, `아군 전체에 ${S.shieldDur}초 보호막 (마법 공격력의 ${pc(S.shieldMult)})${u.bdShieldT > 0 ? ` · 남은 ${u.bdShieldT.toFixed(1)}초` : ''}`, '보호막 ' + sk(S.shieldMult)]);
-      L.push([`${R.name}${u.rescue ? '' : ' (1730 해금)'}`, `스킬 사용 시마다 체력이 가장 낮은 아군 위치에 반경 ${R.radiusCells}칸 장판, ${R.zoneDur}초간 ${R.tick}초마다 장판 안 아군 ${pc(R.healMult)} 회복`, u.rescue ? `회복 ${sk(R.healMult)} × ${ticks}` : '']);
-      L.push([`${V.name}${u.valiant ? '' : ' (1770 해금)'}`, `절실한 구원 ${V.every}회째마다 아군 전체 공격력 +${pc(V.buff)} (${V.buffDur}초)${u.valiant ? ` · 다음까지 ${V.every - ((u.rescueN || 0) % V.every)}회` : ''}${u.valT > 0 ? ` · 남은 ${u.valT.toFixed(1)}초` : ''}`, '']);
+      L.push([`${R.name}`, `스킬 사용 시마다 체력이 가장 낮은 아군 위치에 반경 ${R.radiusCells}칸 장판, ${R.zoneDur}초간 ${R.tick}초마다 장판 안 아군 ${pc(R.healMult)} 회복`, u.rescue ? `회복 ${sk(R.healMult)} × ${ticks}` : '', u.rescue ? null : lockAt(2)]);
+      L.push([`${V.name}`, `절실한 구원 ${V.every}회째마다 아군 전체 공격력 +${pc(V.buff)} (${V.buffDur}초)${u.valiant ? ` · 다음까지 ${V.every - ((u.rescueN || 0) % V.every)}회` : ''}${u.valT > 0 ? ` · 남은 ${u.valT.toFixed(1)}초` : ''}`, '', u.valiant ? null : lockAt(3)]);
     }
-    if (u.kind === 'federico') L.push([`스킬 · ${S.name}`, `공중에 떠올라 자기 칸 기준 폭 ${S.widthCells}칸(좌우 2칸)으로 전방 끝까지 ${S.beamDur}초간 신성한 광선 · ${S.tick}초마다 ${pc(S.tickMult)}`, `${sk(S.tickMult)} × ${Math.round(S.beamDur / S.tick)}`]);
+    if (u.kind === 'federico') L.push([`스킬 · ${S.name}`, `공중에 떠올라 적이 가장 많이 모인 곳으로 폭 ${S.widthCells}칸 신성한 광선을 맵 끝까지 ${S.beamDur}초간 (시전 중 방향 고정) · ${S.tick}초마다 ${pc(S.tickMult)}`, `${sk(S.tickMult)} × ${Math.round(S.beamDur / S.tick)}`]);
     if (u.kind === 'silian') L.push([`스킬 · ${S.name}`, `${S.buffDur}초 동안 기본 공격이 전방 ${D.buff.widthCells}x${D.buff.depthCells} 2연속 베기(${pc(D.buff.segs[0].hits[0][1])})로 바뀜 · 지속 중 마나 획득 없음${u.buffT > 0 ? ` (남은 ${u.buffT.toFixed(1)}초)` : ''}`, sk(D.buff.segs[0].hits[0][1]) + ' × 2']);
     if (u.kind === 'hidaka') L.push([`스킬 · ${S.name}`, `${S.spinDur}초간 ${S.tickEvery}초마다 주위 ${S.radiusCells}칸에 ${pc(S.tickMult)} (총 ${Math.round(S.spinDur / S.tickEvery)}회)`, sk(S.tickMult) + ' × ' + Math.round(S.spinDur / S.tickEvery)]);
     if (u.kind === 'bk') {
       const loops = S.loops + (u.asuraPlus ? S.extraLoops1750 : 0), ticks = Math.ceil(loops * S.loop.dur / S.tickEvery);
       L.push([`수라결 (수라결 게이지 100)`, `기본 공격 +10 · 징벌의 파도 +30. 가득 차면 마나보다 우선 발동, 모션이 끝나면 게이지 전부 소모 · 약 ${(S.start.dur + loops * S.loop.dur + S.end.dur).toFixed(1)}초: ${+S.tickEvery.toFixed(2)}초마다 전방 ${S.radiusCells}칸 ${pc(S.tickMult)} × ${ticks} → 마무리 ${S.endRadiusCells}칸 ${pc(S.endMult)}${u.asuraPlus ? ' (1750 +2초)' : ''}`, `${sk(S.tickMult)} × ${ticks} + ${sk(S.endMult)}`]);
       const W = D.wave;
-      L.push([`징벌의 파도 (마나 ${u.maxMana})${u.wave ? '' : ' · 1730 해금'}`, `마나가 가득 차면 전방 ${W.lengthCells}칸 직선 ${W.hits.map(h => pc(h[1])).join(' / ')}`, u.wave ? W.hits.map(h => sk(h[1])).join(' / ') : '']);
+      L.push([`징벌의 파도 (마나 ${u.maxMana})`, `마나가 가득 차면 전방 ${W.lengthCells}칸 직선 ${W.hits.map(h => pc(h[1])).join(' / ')}`, u.wave ? W.hits.map(h => sk(h[1])).join(' / ') : '', u.wave ? null : lockAt(2)]);
+      L.push(['1750 · 수라결 연장', '수라결 지속 시간 +2초 (연타 4회 추가)', '', u.asuraPlus ? null : lockAt(3)]);
     }
     if (u.kind === 'aman') L.push([`스킬 · ${S.name}`, `아만 주변 ${S.searchCells}칸 안에서 아군이 가장 많이 모인 ${S.areaCells}×${S.areaCells}칸 → 그 안 아군에게 ${S.shieldDur}초 보호막 (마법 공격력의 ${pc(S.shieldMult)})`, '보호막 ' + sk(S.shieldMult)]);
     if (u.kind === 'lahart') L.push([`스킬 · ${S.name}`, `아군이 가장 많이 들어오는 7×7칸으로 이동해 창을 찍고 ${S.guardDur}초간 범위 안 아군이 받는 피해를 대신 받음 (받는 피해 -${pc(S.reduce)}) → 대신 받은 피해의 ${pc(S.returnRate)}를 범위 안 적에게`, '']);
@@ -799,12 +804,15 @@ function drawUnitInfo() {
   if (u.dh) mana = `<div class="ur"><span>마나</span><b>없음 · ${u.canShotgun ? `${{ pistol: '핸드건', shotgun: '샷건', rifle: '라이플' }[u.stance]} ${u.stanceUses || 0}/${DH.cycle[u.stance].count}` : '핸드건 고정'}</b></div>`;
   else if (u.def || (!u.boss && u.skill)) mana = `<div class="ur"><span>마나</span><b>${Math.floor(u.mana || 0)} / ${u.maxMana}</b></div>`;
   if (u.ident) mana += `<div class="ur"><span>수라결 게이지</span><b>${Math.floor(u.idg || 0)} / 100</b></div>`;
-  const sks = skillInfo(u).map(([t, d, dmg]) => `<div class="us"><div class="ust">${t}</div><div class="usd">${d}</div>${dmg ? `<div class="usv">피해 ${dmg}</div>` : ''}</div>`).join('');
+  const sks = skillInfo(u).map(([t, d, dmg, lock]) => lock ? `<div class="us lock"><div class="ust">${t} <em class="lk">잠김 · ${lock}에 해금</em></div><div class="usd">${d}</div></div>`
+    : `<div class="us"><div class="ust">${t}</div><div class="usd">${d}</div>${dmg ? `<div class="usv">피해 ${dmg}</div>` : ''}</div>`).join('');
+  const syn = ally ? ({ dh: '파티 치명타 확률 +10%', sr: '파티 피해량 +6%', bk: '파티 피해량 +6%' })[u.kind] : null; // 클래스 1700 파티 시너지
   const html = `<div class="un ${ally ? 'a' : 'e'}">${u.name}${ally ? ` <small>Lv.${u.level || 1}</small>` : ''}</div>
     <div class="ur"><span>체력</span><b>${u.alive ? `${hp.toLocaleString()} / ${Math.round(u.maxHp).toLocaleString()}` : '처치됨'}</b></div>
     ${u.shield > 1 ? `<div class="ur"><span>보호막</span><b>${Math.round(u.shield).toLocaleString()}</b></div>` : ''}
     ${mana}
-    <div class="ur"><span>${u.side === 'ally' && u.mag ? '마법 공격력' : '공격력'}</span><b>${atk.toLocaleString()}</b></div>${sks}`;
+    <div class="ur"><span>${u.side === 'ally' && u.mag ? '마법 공격력' : '공격력'}</span><b>${atk.toLocaleString()}</b></div>
+    ${syn ? `<div class="ur syn"><span>파티 시너지</span><b>${syn}</b></div>` : ''}${sks}`;
   if (infoEl.dataset.h !== html) { infoEl.innerHTML = html; infoEl.dataset.h = html; }
   const p = view.screenPos(v);
   infoEl.style.left = Math.min(78, Math.max(22, p.x)) + '%'; infoEl.style.top = p.y + '%';
@@ -897,6 +905,68 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
+// 영웅 카드 (레벨 · 남은 체력 · 경험치 막대) — 전투 승리 화면 · 경험치 획득 창 공용
+function heroCards(before, gained) {
+  const per = G.expShare(run, gained);
+  return run.units.map((u, i) => {
+    const b = before[i] || { level: u.level, exp: u.exp }, s = G.computeStats(run, u);
+    return `<div class="vh" data-i="${i}"><div class="vh-p"><img src="${UNITS[u.key].img}" alt=""><span class="vh-lv">Lv.<b>${b.level}</b></span><span class="vh-up">레벨 업!</span></div>
+      <div class="vh-n">${UNITS[u.key].name}</div>
+      <div class="vh-bar hp" title="남은 체력"><i style="width:${Math.round(u.hpPct * 100)}%"></i><span>${Math.round(s.maxHp * u.hpPct).toLocaleString()}</span></div>
+      <div class="vh-bar xp" title="경험치"><i style="width:${b.exp / G.EXP_PER_LEVEL * 100}%"></i><span>+${Math.round(per)}</span></div></div>`;
+  }).join('');
+}
+// 경험치 막대 애니메이션: 이전 경험치 → 지금 경험치, 레벨이 오르면 끝까지 찬 뒤 0부터 다시 + '레벨 업!'
+function animateXP(m, before) {
+  run.units.forEach((u, i) => {
+    const b = before[i]; if (!b) return;
+    const el = m.querySelector(`.vh[data-i="${i}"]`); if (!el) return;
+    const bar = el.querySelector('.vh-bar.xp i'), lv = el.querySelector('.vh-lv b');
+    let ups = u.level - b.level;
+    const step = () => {
+      if (ups > 0) { bar.style.width = '100%'; setTimeout(() => { ups--; lv.textContent = +lv.textContent + 1; el.classList.add('lvup'); bar.style.transition = 'none'; bar.style.width = '0%'; void bar.offsetWidth; bar.style.transition = ''; step(); }, 650); }
+      else bar.style.width = `${u.level >= G.MAX_LEVEL ? 100 : u.exp / G.EXP_PER_LEVEL * 100}%`;
+    };
+    setTimeout(step, 350);
+  });
+}
+// 경험치 획득 창 (이벤트 · 보상 선택지 · 대체 보상 등 전투 밖에서 경험치를 얻을 때)
+function gainExpUI(n, title = '경험치 획득') {
+  const before = run.units.map(u => ({ level: u.level, exp: u.exp }));
+  G.gainExp(run, n);
+  return new Promise(done => {
+    const m = modal(`<div class="vic"><div class="vic-rb"><span>${title}</span></div>
+      <div class="vic-sub">경험치 +${n}${run.units.length > 1 ? ` (1인당 ${Math.round(G.expShare(run, n))})` : ''}</div>
+      <div class="vic-heroes">${heroCards(before, n)}</div>
+      <div class="vic-btns"><button class="btn big vic-go" id="vok">확인</button></div></div>`, 'vicm');
+    animateXP(m, before);
+    $('#vok', m).onclick = () => { closeModal(); done(); };
+  });
+}
+
+// 전투 승리 화면 (2026-10-31): 영웅별 레벨 · 남은 체력 · 경험치 막대(오르는 모습) → 기본 보상 카드 고르고 [선택]
+function victoryUI({ title = '전투 승리!', sub = '', before = [], gained = 0, options, gen = null, label = '기본 보상 선택' }) {
+  return new Promise(done => {
+    const heroes = heroCards(before, gained);
+    let opts = options, sel = -1;
+    const m = modal(`<div class="vic"><div class="vic-rb"><span>${title}</span></div>${sub ? `<div class="vic-sub">${sub}</div>` : ''}
+      <div class="vic-heroes">${heroes}</div>
+      <div class="vic-sec"><span>${label}</span></div>
+      <div class="vic-cards"></div>
+      <div class="vic-btns">${gen && run.rerolls > 0 ? `<button class="btn ghost" id="vrr">리롤 (${run.rerolls})</button>` : ''}<button class="btn big vic-go" id="vgo" disabled>선택</button></div></div>`, 'vicm');
+    const drawCards = () => {
+      $('.vic-cards', m).innerHTML = opts.map((o, i) => `<button class="vic-c${i === sel ? ' on' : ''}" data-i="${i}" style="--c:${o.color || '#e0703a'}">
+        <div class="vc-ic">${o.img ? `<img src="${o.img}" alt="">` : o.html || `<b class="vc-t">${o.badge || '✦'}</b>`}</div><i class="vc-line"></i>
+        <b>${o.title}</b><p>${o.desc || o.sub || ''}</p></button>`).join('');
+      m.querySelectorAll('.vic-c').forEach(c => c.onclick = () => { sel = +c.dataset.i; m.querySelectorAll('.vic-c').forEach(x => x.classList.toggle('on', x === c)); $('#vgo', m).disabled = false; });
+    };
+    drawCards();
+    if ($('#vrr', m)) $('#vrr', m).onclick = () => { if (run.rerolls <= 0) return; run.rerolls--; opts = gen(); sel = -1; $('#vgo', m).disabled = true; drawCards(); $('#vrr', m).textContent = `리롤 (${run.rerolls})`; if (run.rerolls <= 0) $('#vrr', m).disabled = true; };
+    $('#vgo', m).onclick = async () => { if (sel < 0) return; closeModal(); await opts[sel].apply(); done(); };
+    animateXP(m, before);
+  });
+}
+
 async function endBattle(result) {
   meterSnap();
   const cfgCoins = battle.cfg.coins.v;
@@ -906,6 +976,7 @@ async function endBattle(result) {
   allies.forEach((a, i) => { run.units[i].hpPct = Math.max(0, a.hp / a.maxHp); });
   const kind = roomKind, f = run.floor;
   const exp = { battle: 45, rift: 55, ambush: 60, elite: 70, boss: 90 }[kind]; // 1층을 다 돌면 약 Lv5
+  const before = run.units.map(u => ({ level: u.level, exp: u.exp }));
   const ups = G.gainExp(run, exp); // 파티 인원으로 나눠 받는다
   const healFrac = (run.asc >= 5 ? 0.15 : 0.3) + (run.meta?.healAfter || 0);
   { // 낙원의 유산 복원석: 전투 승리마다 지급 (런 밖에 저장)
@@ -915,11 +986,12 @@ async function endBattle(result) {
   if (kind === 'boss') for (const u of run.units) u.hpPct = 1; else G.healLost(run, healFrac);
   const head = `${kind === 'boss' ? '보스 처치!' : '승리!'} · 경험치 +${exp}${run.units.length > 1 ? ` (1인당 ${Math.round(G.expShare(run, exp))})` : ''}${ups ? ` · <b style="color:#7ee08a">레벨 업 Lv.${run.unit.level}</b>` : ''} · ${kind === 'boss' ? '체력 전부 회복' : `잃은 체력 ${healFrac * 100}% 회복`}`;
   view.active = false; hud.innerHTML = '';
+  const vsub = `경험치 +${exp}${run.units.length > 1 ? ` (1인당 ${Math.round(G.expShare(run, exp))})` : ''} · ${kind === 'boss' ? '영웅들의 체력 전부 회복' : `영웅들의 잃은 체력 ${Math.round(healFrac * 100)}% 회복`}`;
 
   if (kind === 'battle' || kind === 'rift' || kind === 'ambush') {
     const coin = G.coinGain(run, 18 + 4 * f);
-    await wait(done => choose({ title: '전투 승리', sub: head, skip: null,
-      options: [coinOption(coin), { title: '추가 회복', img: HEAL_IMG, desc: '최대 체력 20% 회복', color: '#7ee08a', apply: () => G.healPct(run, 0.2) }, paradiseOption()], onDone: done })); // 일반 전투에서는 장비가 나오지 않는다
+    await victoryUI({ sub: vsub, before, gained: exp, // 일반 전투에서는 장비가 나오지 않는다
+      options: [coinOption(coin), { title: '추가 회복', img: HEAL_IMG, desc: '모든 영웅이 최대 체력의 <b style="color:#7ee08a">20%</b>만큼 회복', color: '#7ee08a', apply: () => G.healPct(run, 0.2) }, paradiseOption()] });
     if (kind === 'rift') {
       // 균열의 틈: 낙원 유물 2개 또는 경험치 중 하나 + 장신구 1개 (고정)
       const gen = () => [paradiseOption(), paradiseOption(), expOption(70)];
@@ -929,12 +1001,12 @@ async function endBattle(result) {
   } else if (kind === 'elite') {
     // 정예: 장비 2개 또는 경험치 중 하나 + 장신구 1개
     const gen = () => [...Array.from({ length: 2 }, () => equipOption(G.makeEquip(run, { minTier: Math.random() < 0.5 ? 2 : 1 }))), expOption(80)];
-    await wait(done => choose({ title: '정예 처치', sub: head + '<br>장비 또는 경험치를 고르세요', options: gen(), gen, skip: null, onDone: done }));
+    await victoryUI({ title: '정예 처치!', sub: vsub, before, gained: exp, options: gen(), gen, label: '장비 또는 경험치 선택' });
     await accReward('정예 처치 · 장신구');
   } else if (kind === 'boss') {
     run.coins += G.coinGain(run, 40 + 10 * f);
     const gen = () => Array.from({ length: 3 }, () => paradiseOption());
-    await wait(done => choose({ title: `${f}층 보스 처치`, sub: head + `<br>재화 +${G.coinGain(run, 40 + 10 * f)} · 낙원 유물 하나를 고르세요`, options: gen(), gen, onDone: done }));
+    await victoryUI({ title: `${f}층 보스 처치!`, sub: vsub + ` · 재화 +${G.coinGain(run, 40 + 10 * f)}`, before, gained: exp, options: gen(), gen, label: '낙원 유물 선택' });
     await wait(done => choose({ title: `${f}층 보스 처치 · 추가 보상`, sub: '장비 또는 경험치', skip: null, options: [equipOption(G.makeEquip(run, { minTier: 2 })), expOption(120)], onDone: done }));
     await accReward(`${f}층 보스 처치 · 장신구`, f >= 3 ? { grade: 1 } : {}); // 부활한 발탄 = 유물 장신구
     return nextFloor();
@@ -1262,7 +1334,7 @@ function gameOver(cleared) {
   } catch (e) { ld.querySelector('span').textContent = '에셋 로드 실패: ' + e.message; console.error(e); return; }
   ld.remove();
   charSelect();
-  window.__rift = { get run() { return run; }, get battle() { return battle; }, view, G, M, startBattle, showMap, title, enterRoom, mainMenu, paradise, charSelect, fieldScreen, riftSetup, relicUI, waitPhase, recruitRoom: () => recruitRoom(), reward: () => endBattle("win"), shopRoom: () => shopRoom(), nextFloor: () => nextFloor(), showUnitInfo: (x, y) => showUnitInfo(x, y), gameOver: (c) => gameOver(c), exitRift: () => exitRift(), fieldScreen: () => fieldScreen(), recruitUI: (p) => recruitUI(p, k => unitDesc(k)), INANNA: INANNA_DEF, AZENA: AZENA_DEF };
+  window.__rift = { get run() { return run; }, get battle() { return battle; }, view, G, M, startBattle, showMap, title, enterRoom, mainMenu, paradise, charSelect, fieldScreen, riftSetup, relicUI, waitPhase, recruitRoom: () => recruitRoom(), reward: () => endBattle("win"), shopRoom: () => shopRoom(), nextFloor: () => nextFloor(), showUnitInfo: (x, y) => showUnitInfo(x, y), gameOver: (c) => gameOver(c), exitRift: () => exitRift(), gainExpUI: (n, t) => gainExpUI(n, t), fieldScreen: () => fieldScreen(), recruitUI: (p) => recruitUI(p, k => unitDesc(k)), INANNA: INANNA_DEF, AZENA: AZENA_DEF };
   document.title = '차원의 균열 시뮬레이터';
   window.__ready = true;
 })();

@@ -460,6 +460,45 @@ button.li { cursor: pointer; } button.li:hover:not(:disabled) { background: #332
 .sc-h { font-size: 15px; margin-bottom: 4px; } .sc-h b { color: #ffd166; font-size: 20px; margin-left: 6px; }
 .sc-r { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; border-top: 1px solid #ffffff10; } .sc-r small { color: #8a93a5; margin-left: 4px; } .sc-r b { font-variant-numeric: tabular-nums; }
 .rc-rar { display: block; font-size: 13px; letter-spacing: 1px; margin: 1px 0 3px; text-shadow: 0 0 6px currentColor; } .rc-rar small { font-size: 10px; color: #9aa3b5; letter-spacing: 0; margin-left: 4px; text-shadow: none; }
-.mbtns .exitb { border-color: #ff9a8a80; color: #ffb0a0; }
+.mbtns .exitb { font-size: 16px; font-weight: 800; padding: 10px 26px; min-width: 130px; background: linear-gradient(#5a2a28, #3a1a1a); border: 1px solid #ff9a8a; color: #ffd0c8; }
+.mbtns { align-items: center; }
 .title .cont { display: flex; flex-direction: column; align-items: center; gap: 2px; } .title .cont small { font-size: 12px; opacity: .85; font-weight: 400; }
 .pcard .pcont { display: block; margin-top: 4px; font-style: normal; font-size: 12px; color: #7ee08a; }
+
+/* 체력바 옆 레벨 (아군) */
+.hrow { position: relative; } .hrow .hlv { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); margin-right: 3px; font-size: 10px; font-weight: 800; color: #ffe08a; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; }
+/* 전투 승리 화면 (2026-10-31) */
+.mbox.vicm { background: linear-gradient(#141821f2, #0c0f15f5); border: 1px solid #3b4a6a; padding: 0 14px 14px; width: min(460px, 94vw); max-height: 92vh; overflow-y: auto; }
+.vic { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.vic-rb { margin-top: 14px; position: relative; padding: 7px 46px; background: linear-gradient(#4f78c8, #2c4f99); border: 2px solid #a9c2f0; border-radius: 4px; box-shadow: 0 3px 0 #1b2f5c, 0 6px 14px #0008; }
+.vic-rb::before, .vic-rb::after { content: ''; position: absolute; top: 8px; width: 22px; height: 100%; background: #2c4f99; border: 2px solid #a9c2f0; z-index: -1; }
+.vic-rb::before { left: -16px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 40% 50%); } .vic-rb::after { right: -16px; clip-path: polygon(0 0, 100% 0, 60% 50%, 100% 100%, 0 100%); }
+.vic-rb span { font-size: 20px; font-weight: 900; color: #fff; letter-spacing: 2px; text-shadow: 0 2px 0 #1b2f5c; }
+.vic-sub { font-size: 12px; color: #c8d0de; text-align: center; }
+.vic-heroes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 4px 0 2px; }
+.vh { width: 74px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.vh-p { position: relative; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; border: 2px solid #5a6680; background: #1c2230; }
+.vh-p img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.vh-lv { position: absolute; left: 2px; top: 1px; font-size: 10px; color: #ffe08a; font-weight: 700; text-shadow: 0 1px 2px #000, 0 0 3px #000; } .vh-lv b { font-size: 13px; }
+.vh-up { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); padding: 2px 6px; border-radius: 9px; background: #111a; border: 1px solid #ffd16699; white-space: nowrap; font-size: 10px; font-weight: 900; color: #ffe08a; text-shadow: 0 1px 2px #000; opacity: 0; }
+.vh.lvup .vh-p { border-color: #ffd166; box-shadow: 0 0 12px #ffd166aa; } .vh.lvup .vh-up { opacity: 1; animation: vhup .8s ease-out; }
+@keyframes vhup { 0% { transform: translate(-50%, -20%) scale(.6); opacity: 0; } 60% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+.vh-n { font-size: 11px; color: #e6e9f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 74px; }
+.vh-bar { position: relative; width: 64px; height: 7px; background: #000a; border: 1px solid #000; border-radius: 2px; overflow: hidden; }
+.vh-bar i { position: absolute; left: 0; top: 0; bottom: 0; transition: width .6s ease-out; }
+.vh-bar.hp i { background: linear-gradient(#7ee08a, #3fae5a); } .vh-bar.xp i { background: linear-gradient(#8fd0ff, #3f8fe0); }
+.vh-bar span { position: absolute; right: 2px; top: -1px; font-size: 7px; line-height: 9px; color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+.vic-sec { width: 100%; display: flex; align-items: center; gap: 10px; font-size: 12px; color: #c8d0de; margin-top: 6px; }
+.vic-sec::before, .vic-sec::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #6a7690, transparent); }
+.vic-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; width: 100%; }
+.vic-c { background: linear-gradient(#1e232d, #15191f); border: 2px solid #2c3340; border-radius: 4px; padding: 14px 8px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #fff; cursor: pointer; font: inherit; min-height: 168px; transition: border-color .15s, transform .15s; }
+.vic-c:hover { border-color: #56627a; } .vic-c.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 0 16px color-mix(in srgb, var(--c) 45%, transparent); transform: translateY(-2px); }
+.vc-ic { height: 64px; display: flex; align-items: center; justify-content: center; } .vc-ic img { max-height: 64px; max-width: 72px; object-fit: contain; filter: drop-shadow(0 2px 6px #000a); }
+.vc-ic .ricon { width: 56px; height: 56px; } .vc-t { font-size: 22px; font-weight: 900; color: var(--c); text-shadow: 0 0 10px var(--c); }
+.vc-line { width: 70%; height: 1px; background: #3a4252; }
+.vic-c > b { font-size: 14px; } .vic-c p { margin: 0; font-size: 11px; color: #aeb6c6; line-height: 1.4; text-align: center; }
+.vic-btns { display: flex; gap: 8px; margin-top: 6px; }
+.vic-go { min-width: 140px; background: linear-gradient(#41608f, #2a426b); border: 1px solid #8fa8d8; }
+.vic-go:disabled { opacity: .45; }
+.uinfo .us.lock { opacity: .55; filter: grayscale(1); } .uinfo .us.lock .ust { color: #9aa3b5; } .uinfo .lk { font-style: normal; font-size: 10px; font-weight: 700; color: #c7ccd6; background: #ffffff1a; border: 1px solid #ffffff30; border-radius: 3px; padding: 0 4px; margin-left: 4px; }
+.uinfo .ur.syn b { color: #7ee08a; }

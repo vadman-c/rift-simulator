@@ -527,7 +527,7 @@ export class View {
     // HP바
     const el = document.createElement('div');
     el.className = 'hpw' + (u.side === 'ally' ? ' ally' : '') + (u.boss ? ' boss' : '') + (u.side === 'shop' ? ' shop' : '');
-    el.innerHTML = `<div class="hpn">${u.boss || u.side === 'shop' ? u.name : ''}</div><div class="hpb"><i class="hpf"></i><i class="hps"></i></div>` + (u.side === 'ally' && !u.noMana ? '<div class="mpb"><i></i></div>' : '') + (u.dh ? '<div class="stc"></div>' : '') + (u.ident ? '<div class="sub"><i></i></div>' : '') + (u.side === 'ally' ? '<div class="eqi"></div>' : '');
+    el.innerHTML = `<div class="hpn">${u.boss || u.side === 'shop' ? u.name : ''}</div>${u.side === 'ally' ? `<div class="hrow"><b class="hlv">Lv.${u.level || 1}</b>` : ''}<div class="hpb"><i class="hpf"></i><i class="hps"></i></div>${u.side === 'ally' ? '</div>' : ''}` + (u.side === 'ally' && !u.noMana ? '<div class="mpb"><i></i></div>' : '') + (u.dh ? '<div class="stc"></div>' : '') + (u.ident ? '<div class="sub"><i></i></div>' : '') + (u.side === 'ally' ? '<div class="eqi"></div>' : '');
     this.overlay.appendChild(el);
     vis.el = el; vis.hpf = el.querySelector('.hpf'); vis.hps = el.querySelector('.hps'); vis.mpf = el.querySelector('.mpb i'); vis.stc = el.querySelector('.stc'); vis.subf = el.querySelector('.sub i'); vis.eqi = el.querySelector('.eqi');
     this.units.set(u.id, vis);

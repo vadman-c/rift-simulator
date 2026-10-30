@@ -126,7 +126,8 @@ export class Battle {
         if (a.update) a.update(a.t, dt);
         if (a.hits) { for (const h of a.hits) if (!h.done && a.t >= h.at) { h.done = true; h.fn(); } }
         else if (!a.done && a.t >= a.hitAt) { a.done = true; a.fn(); }
-        if (a.t >= a.dur) { u.action = null; a.onEnd?.(); }
+        if (u.faceLock != null) u.face = u.faceLock; // 스킬 시전 중 방향 고정
+        if (a.t >= a.dur) { u.action = null; u.faceLock = null; a.onEnd?.(); }
         u.moving = false;
         continue;
       }
@@ -521,23 +522,24 @@ export class Battle {
           hits.push({ at: S.transformAt / spd, fn: () => { u.form = 'azena'; u.def = AZENA; this.ev({ t: 'form', id: u.id, form: 'azena' }); this.ev({ t: 'text', id: u.id, msg: '아제나', color: '#b8c8ff' }); } });
         }
       } else if (u.kind === 'federico') {
-        // 신성한 광선: 공중에 떠올라, 자기 칸 기준 폭 5칸으로 맵 끝까지 3초간 광선 (tick마다 피해)
-        // 2026-10-31 3차: 앞·뒤·좌·우 중 광선에 적이 가장 많이 들어오는 방향으로 쏜다 (같으면 적 진영 쪽)
-        const fwd = u.side === 'ally' ? -1 : 1;
-        const col = Math.round(u.x / CELL + (COLS - 1) / 2), bx = (Math.max(0, Math.min(COLS - 1, col)) - (COLS - 1) / 2) * CELL;
-        const half = S.widthCells * CELL / 2;
-        const beams = [[0, fwd], [1, 0], [-1, 0], [0, -fwd]].map(([dx, dz]) => {
-          const ox = dz ? bx : u.x, oz = u.z; // 세로 광선은 칸 가운데 줄, 가로 광선은 서 있는 줄
-          const inB = (f) => { const rx = f.x - ox, rz = f.z - oz; return rx * dx + rz * dz >= -0.6 && Math.abs(rx * dz - rz * dx) <= half + f.rad * 0.5; };
-          const len = dz ? (dz < 0 ? oz + BOUNDS.z : BOUNDS.z - oz) : (dx < 0 ? ox + BOUNDS.x : BOUNDS.x - ox);
-          return { dx, dz, ox, oz, inB, len, n: this.foes(u).filter(inB).length };
-        });
-        const B = beams.reduce((a, b) => (b.n > a.n ? b : a));
-        const inBeam = B.inB;
+        // 신성한 광선: 공중에 떠올라 폭 5칸 광선을 맵 끝까지 3초간 (tick마다 피해)
+        // 2026-10-31 3차: 적이 가장 많이 모인 곳(반경 1.5칸 안 적 수 최대)을 광선 중심선이 지나가도록 조준. 시전 중 방향 고정
+        const half = S.widthCells * CELL / 2, foes = this.foes(u).filter(f => !(f.untargetT > 0));
+        let aim = null, an = -1, ad = 1e9;
+        for (const f of foes) {
+          const near = foes.filter(o => dist(o, f) <= CELL * 1.5);
+          const cx = near.reduce((a, o) => a + o.x, 0) / near.length, cz = near.reduce((a, o) => a + o.z, 0) / near.length, dd = Math.hypot(cx - u.x, cz - u.z);
+          if (near.length > an || (near.length === an && dd < ad)) { an = near.length; ad = dd; aim = { x: cx, z: cz }; }
+        }
+        let bdx = 0, bdz = u.side === 'ally' ? -1 : 1;
+        if (aim) { const l = Math.hypot(aim.x - u.x, aim.z - u.z); if (l > 0.3) { bdx = (aim.x - u.x) / l; bdz = (aim.z - u.z) / l; } }
+        const ext = (o, d, B) => d > 1e-6 ? (B - o) / d : d < -1e-6 ? (-B - o) / d : 1e9; // 맵 끝까지 거리
+        const B = { dx: bdx, dz: bdz, ox: u.x, oz: u.z, len: Math.max(1, Math.min(ext(u.x, bdx, BOUNDS.x), ext(u.z, bdz, BOUNDS.z))) };
+        const inBeam = (f) => { const rx = f.x - B.ox, rz = f.z - B.oz; return rx * B.dx + rz * B.dz >= -0.6 && Math.abs(rx * B.dz - rz * B.dx) <= half + f.rad * 0.5; };
+        u.face = Math.atan2(-B.dz, B.dx); u.faceLock = u.face;
         this.ev({ t: 'vfx', kind: 'fed_float', from: u.id, dur: S.floatDur / spd });
         u.face = Math.atan2(-B.dz, B.dx);
         hits.push({ at: S.beamFrom / spd, fn: () => {
-          u.face = Math.atan2(-B.dz, B.dx);
           this.ev({ t: 'vfx', kind: 'fed_beam', from: u.id, x: B.ox, z: B.oz, dx: B.dx, dz: B.dz, len: B.len, w: half * 2, dur: S.beamDur / spd });
         } });
         const n = Math.round(S.beamDur / S.tick);
@@ -657,16 +659,7 @@ export class Battle {
 
   _startAction(u, tgt) {
     const spd = this._atkSpd(u);
-    // 각성기 (1770 해금 유닛)
-    const awakeMax = u.awake ? (this.cfg.ult.has('spec') && u.side === 'ally' ? 2 : 1) : 0;
-    if (u.awakeUsed < awakeMax && (this.t >= 12 + u.awakeUsed * 15 || (u.hp < u.maxHp * 0.5 && u.awakeUsed === 0))) {
-      u.awakeUsed++;
-      const A = u.dh ? DH.awake : { dur: 1.6, hitAt: 0.9 };
-      u.action = { kind: 'awake', t: 0, dur: A.dur, hitAt: A.hitAt, spd: 1, fn: () => this._awake(u, tgt) };
-      this.ev({ t: 'act', id: u.id, kind: 'awake', clip: A.clip, dur: A.dur });
-      this.ev({ t: 'banner', msg: u.dh ? `${u.name} · ${DH.awake.name}` : '각성기!', color: '#ffd166' });
-      return;
-    }
+    // 데빌헌터 각성기는 2026-10-31 3차에 삭제 (각성기 기능 없음)
     if (u.dh) return this._dhAction(u, tgt, spd);
     if (u.def) return this._seqAction(u, tgt, spd);
     if (u.skill && u.mana >= u.maxMana) {
