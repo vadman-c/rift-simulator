@@ -178,6 +178,8 @@ export class Battle {
       }
     }
 
+    this._separate(dt);
+
     // 검은 산의 포식자 칼날
     if (this.blades) for (let i = this.blades.length - 1; i >= 0; i--) {
       const b = this.blades[i], step = b.speed * dt;
@@ -192,6 +194,22 @@ export class Battle {
     if (!e) { this.over = 'win'; for (const u of this.units) if (u.add && u.alive) this._kill(u); this.ev({ t: 'end', result: 'win' }); }
     else if (!a && !this._pendingRevive) { this.over = 'lose'; this.ev({ t: 'end', result: 'lose' }); }
     else if (this.t > 150) { this.over = 'lose'; this.ev({ t: 'end', result: 'lose', timeout: true }); }
+  }
+
+  // 같은 편 유닛끼리 겹치지 않게 밀어낸다 (2026-10-31): 이동 중에만 피하던 것을 서 있거나 공격·순간이동 후에도 적용
+  // 겹친 거리의 절반씩 서로 반대로 (프레임마다 조금씩 → 튀지 않게). 밀려나는 중·회전 공격 중·공중에 뜬 유닛은 제외
+  _separate(dt) {
+    const L = this.units.filter(u => u.alive && !u.knock && !u.sw && !u.ww && !u.airborne && !u.noCollide);
+    const k = Math.min(1, dt * 12);
+    for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) {
+      const a = L[i], b = L[j]; if (a.side !== b.side) continue;
+      const m = (a.rad + b.rad) * 0.95; let dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+      if (d >= m) continue;
+      if (d < 0.001) { const g = (a.id * 7 + b.id * 13) % 6.283; dx = Math.cos(g); dz = Math.sin(g); d = 1; } else { dx /= d; dz /= d; d = Math.hypot(b.x - a.x, b.z - a.z); }
+      const push = (m - d) * 0.5 * k, wa = a.boss ? 0 : 1, wb = b.boss ? 0 : 1, ws = (wa + wb) || 1; // 보스는 밀리지 않는다
+      a.x -= dx * push * 2 * wa / ws; a.z -= dz * push * 2 * wa / ws; b.x += dx * push * 2 * wb / ws; b.z += dz * push * 2 * wb / ws;
+      for (const u of [a, b]) { u.x = Math.max(-BOUNDS.x, Math.min(BOUNDS.x, u.x)); u.z = Math.max(-BOUNDS.z, Math.min(BOUNDS.z, u.z)); }
+    }
   }
 
   // 낙원의 유산 공명 (9단계 이상 유물 전부)

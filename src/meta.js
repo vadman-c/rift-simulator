@@ -59,9 +59,11 @@ export function restoreOdds(st) { return st < 5 ? 1 : st < 9 ? 0.6 : st < 12 ? 0
 export function restoreCost(st) { return st < 9 ? 1 : st < 14 ? 2 : 3; }
 
 const KEY = 'rift_meta';
-export const DEFAULT_META = () => ({ relics: { censer: 5, horn: 9, mask: 7, cup: 9, bell: 10, mirror: 7 }, grades: { censer: 0, horn: 0, mask: 0, cup: 0, bell: 0, mirror: 0 }, stones: 80, season: 1 });
+// 2026-10-31 3차: 처음 들어가면 모든 유물 0단계 · 일반 등급 · 복원석 0 (예전 저장값은 ver가 달라 초기화)
+export const META_VER = 2;
+export const DEFAULT_META = () => ({ ver: META_VER, relics: { censer: 0, horn: 0, mask: 0, cup: 0, bell: 0, mirror: 0 }, grades: { censer: 0, horn: 0, mask: 0, cup: 0, bell: 0, mirror: 0 }, stones: 0, season: 1 });
 export function loadMeta() {
-  try { const m = JSON.parse(localStorage.getItem(KEY) || 'null'); if (m && m.relics) return { ...DEFAULT_META(), ...m, relics: { ...DEFAULT_META().relics, ...m.relics }, grades: { ...DEFAULT_META().grades, ...(m.grades || {}) } }; } catch {}
+  try { const m = JSON.parse(localStorage.getItem(KEY) || 'null'); if (m && m.relics && m.ver === META_VER) return { ...DEFAULT_META(), ...m, relics: { ...DEFAULT_META().relics, ...m.relics }, grades: { ...DEFAULT_META().grades, ...(m.grades || {}) } }; } catch {}
   return DEFAULT_META();
 }
 export function saveMeta(m) { try { localStorage.setItem(KEY, JSON.stringify(m)); } catch {} }

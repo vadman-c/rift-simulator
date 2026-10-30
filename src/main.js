@@ -15,6 +15,30 @@ const h = (html) => { const t = document.createElement('template'); t.innerHTML 
 const ROOM_NAME = (t) => ROOM_INFO[t]?.name || t;
 
 let view, run = null, battle = null, mode = 'title', speed = 1, devOn = false;
+
+// ───────── 균열 진행 저장 (2026-10-31): 지도에 돌아올 때마다 자동 저장, [나가기]로 일반 상태(필드)로 나갔다가 이어하기 ─────────
+const SAVE_KEY = 'rift_save';
+function saveRun() {
+  if (!run) return false;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, at: Date.now(), elapsed: Date.now() - run.startTime, run: { ...run, meta: null } })); return true; } catch { return false; }
+}
+function loadSave() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return d && d.v === 1 && d.run ? d : null; } catch { return null; } }
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch {} }
+function resumeRun(d) {
+  run = d.run;
+  Object.defineProperty(run, 'unit', { get() { return this.units[0]; }, enumerable: false, configurable: true });
+  run.meta = M.metaBonus(M.loadMeta()); // 낙원 유물 효과는 저장하지 않고 다시 계산
+  run.startTime = Date.now() - (d.elapsed || 0);  // 플레이 시간은 나가 있던 동안을 빼고 이어서
+  toast(`${run.floor}층에서 이어합니다`, '#7ee08a');
+  showMap();
+}
+// 지도에서 [나가기]: 진행을 저장하고 일반 상태(필드)로. 전투 중에는 버튼이 없다
+function exitRift() {
+  const m = modal(`<div class="mt">차원의 균열에서 나갈까요?</div><div class="ms">지금까지의 진행(${run.floor}층 · 파티 ${run.units.length}명 · 장비 · 재화)을 저장하고 필드로 나갑니다.<br>낙원 → 차원의 균열에서 <b>이어하기</b>로 돌아올 수 있습니다.</div>
+    <div class="mrow"><button class="btn" id="y">저장하고 나가기</button><button class="btn ghost" id="n">계속하기</button></div>`);
+  $('#y', m).onclick = () => { closeModal(); const ok = saveRun(); run = null; battle = null; view.clear(); fieldScreen(); toast(ok ? '진행 상황을 저장했습니다' : '저장하지 못했습니다 (브라우저 저장소 사용 불가)', ok ? '#7ee08a' : '#ff9a8a'); };
+  $('#n', m).onclick = closeModal;
+}
 const app = $('#app'), screen = $('#screen'), hud = $('#hud'), modalRoot = $('#modal');
 
 // ───────── 공통 UI ─────────
@@ -194,7 +218,7 @@ function paradise() {
   screen.innerHTML = '';
   const el = h(`<div class="menu par" style="background-image:url('${IMG.selectBg}')">
     <div class="phead"><button class="btn sm ghost" id="back">← 필드</button><b>낙원</b><span>낙원력 <em>${M.paradisePower(ms).toLocaleString()}</em></span></div>
-    <button class="pcard rift" id="p_rift"><b>차원의 균열</b><span>로스트아크 클래스·NPC로 9층을 돌파하는 오토배틀러 로그라이크 (현재 1층)</span></button>
+    <button class="pcard rift" id="p_rift"><b>차원의 균열</b><span>로스트아크 클래스·NPC로 3층을 돌파하는 오토배틀러 로그라이크</span>${loadSave() ? `<em class="pcont">진행 중 · ${loadSave().run.floor}층 (이어하기 가능)</em>` : ''}</button>
     <button class="pcard relic" id="p_relic"><b>낙원의 유산</b><span>유물 복원 · 공명 — 균열의 NPC 해금과 보너스</span>
       <div class="picons">${M.RELIC_KEYS.map(k => `<i>${relicIcon(k, ms.grades[k])}<small>${ms.relics[k]}</small></i>`).join('')}</div></button>
     <div class="pnote">복원석 💠 ${ms.stones} · 균열 전투 승리마다 복원석을 얻습니다 (일반 1 · 정예 2 · 보스 3)</div>
@@ -233,7 +257,7 @@ function relicUI(tab = 'restore', sel = 'censer', flash = '') {
     <div class="rgrid">${icons}</div>
     <div class="rtabs"><button class="btn${tab === 'restore' ? '' : ' ghost'}" id="t_res">복원</button><button class="btn${tab === 'reso' ? '' : ' ghost'}" id="t_rso">공명</button></div>
     <div class="rbody">${body}</div>
-    <div class="rdev"><button class="btn xs ghost" id="d_st">개발: 복원석 +50</button><button class="btn xs ghost" id="d_max">개발: 전부 18단계</button><button class="btn xs ghost" id="d_rst">시즌 초기화</button></div>
+    <div class="rdev"><button class="btn xs" id="d_st">복원석 +100</button><button class="btn xs" id="d_gr" ${(ms.grades[sel] || 0) >= M.GRADES.length - 1 ? 'disabled' : ''}>${M.RELIC_DEF[sel].name} 등급 올리기 (${M.GRADES[ms.grades[sel] || 0]} → ${M.GRADES[Math.min(M.GRADES.length - 1, (ms.grades[sel] || 0) + 1)]})</button><button class="btn xs" id="d_rst">초기화 (0단계 · 일반 등급)</button><button class="btn xs ghost" id="d_max">개발: 전부 18단계</button></div>
   </div>`);
   screen.appendChild(el);
   $('#back', el).onclick = paradise;
@@ -244,9 +268,13 @@ function relicUI(tab = 'restore', sel = 'censer', flash = '') {
     const r = M.tryRestore(ms, sel);
     relicUI('restore', sel, !r.ok ? r.msg : r.up ? `<b class="ok">복원 성공!</b> ${D.name} ${r.st}단계 · ${M.stageText(sel, r.st)}` : `<b class="no">복원 실패</b> · ${r.st}단계 유지`);
   };
-  $('#d_st', el).onclick = () => { ms.stones += 50; M.saveMeta(ms); relicUI(tab, sel); };
+  $('#d_st', el).onclick = () => { ms.stones += 100; M.saveMeta(ms); relicUI(tab, sel); };
+  $('#d_gr', el).onclick = () => { // 선택한 유물 등급 +1 (일반 → 고급 → 희귀 → 영웅 → 전설 → 유물 → 고대)
+    const g = ms.grades[sel] || 0; if (g >= M.GRADES.length - 1) return;
+    ms.grades[sel] = g + 1; M.saveMeta(ms); toast(`${M.RELIC_DEF[sel].name} 등급업 · ${M.GRADES[g]} → ${M.GRADES[g + 1]}`, M.GRADE_COL[g + 1]); relicUI(tab, sel);
+  };
   $('#d_max', el).onclick = () => { for (const k of M.RELIC_KEYS) ms.relics[k] = 18; M.saveMeta(ms); relicUI(tab, sel); };
-  $('#d_rst', el).onclick = () => { const d = M.DEFAULT_META(); for (const k of M.RELIC_KEYS) { ms.relics[k] = 0; ms.grades[k] = 0; } ms.stones = d.stones; ms.season++; M.saveMeta(ms); toast('낙원 시즌 초기화 · 모든 유물 0단계', '#ff9a8a'); relicUI(tab, sel); };
+  $('#d_rst', el).onclick = () => { const d = M.DEFAULT_META(); for (const k of M.RELIC_KEYS) { ms.relics[k] = 0; ms.grades[k] = 0; } ms.stones = d.stones; ms.season++; M.saveMeta(ms); toast('낙원 유물 초기화 · 모두 0단계 · 일반 등급', '#ff9a8a'); relicUI(tab, sel); };
 }
 
 // ───────── 타이틀 ─────────
@@ -258,7 +286,7 @@ function riftSetup() {
   screen.innerHTML = '';
   const mates = CLASS_KEYS.filter(k => k !== sel && roster[k] >= 1700).map(k => `${UNITS[k].name} ${roster[k]}`);
   const mb = M.metaBonus(M.loadMeta());
-  const npcTxt = NPC_KEYS.map(k => UNITS[k].name);
+  const npcTxt = NPC_KEYS.map(k => UNITS[k].name), saved = loadSave();
   const s = h(`<div class="title" style="background-image:url('${IMG.selectBg}')">
     <button class="btn sm ghost backbtn" id="back">← 낙원</button>
     <div class="tt">차원의 균열</div><div class="tsub">입장 캐릭터 확인</div>
@@ -268,15 +296,18 @@ function riftSetup() {
       ${P.esther[sel] ? '<div class="note" style="color:#ffb0e0">에스더 무기 보유</div>' : ''}
       <div class="note">현재 범위: <b>1~3층</b></div>
     </div>
-    <button class="btn big" id="go" ${t === 0 ? 'disabled' : ''}>균열 입장</button>
+    ${saved ? `<button class="btn big cont" id="cont">이어하기 <small>${UNITS[saved.run.main]?.name || ''} · ${saved.run.floor}층 · Lv.${saved.run.units[0].level} · 파티 ${saved.run.units.length}명</small></button>` : ''}
+    <button class="btn big${saved ? ' ghost' : ''}" id="go" ${t === 0 ? 'disabled' : ''}>${saved ? '새로 시작' : '균열 입장'}</button>
     <div class="codex" id="cdx"></div>
   </div>`);
   screen.appendChild(s);
   renderCodex($('#cdx', s));
   $('#back').onclick = paradise;
   $('#chg').onclick = charSelect;
+  if (saved) $('#cont').onclick = () => resumeRun(saved);
   $('#go').onclick = () => {
-    saveProfile();
+    if (saved && !$('#go').dataset.ok) { $('#go').dataset.ok = 1; $('#go').textContent = '저장된 진행을 지우고 새로 시작'; toast('한 번 더 누르면 저장된 진행이 지워집니다', '#ffb84a'); return; }
+    clearSave(); saveProfile();
     run = G.newRun({ main: sel, roster: { ...roster }, asc: 0, meta: M.metaBonus(M.loadMeta()), esther: !!P.esther[sel] });
     codexMark('units', sel);
     showMap(); // 시작 유물 선택 없이 바로 지도로
@@ -333,6 +364,7 @@ function codexCard(k) {
 // ───────── 지도 ─────────
 function showMap() {
   mode = 'map'; view.active = false; hud.innerHTML = '';
+  saveRun(); // 지도에 올 때마다 자동 저장
   const m = run.map, f = run.floor;
   screen.innerHTML = '';
   const el = h(`<div class="mapscr">
@@ -342,7 +374,7 @@ function showMap() {
     ${m.grid[m.pos.r][m.pos.c]?.type === 'shop' ? '<button class="btn shopin" id="shopin">🛒 상점 들어가기 <kbd>E</kbd></button>' : ''}
     <div class="mfoot">
       <button class="btn big wtbtn" id="wt">⚔ 대기 단계로 돌아가기 · 장비 정비</button>
-      <div class="mbtns"><button class="btn sm" id="info">균열 정보</button><button class="btn sm ghost" id="dev">개발자</button></div>
+      <div class="mbtns"><button class="btn sm" id="info">균열 정보</button><button class="btn sm ghost" id="dev">개발자</button><button class="btn sm ghost exitb" id="exit">나가기</button></div>
     </div></div>`);
   screen.appendChild(el);
   const grid = $('#grid', el);
@@ -369,6 +401,7 @@ function showMap() {
   $('#info', el).onclick = infoPanel;
   if ($('#shopin', el)) $('#shopin', el).onclick = () => { if (!mapMoving) shopRoom(); };
   $('#dev', el).onclick = devPanel;
+  $('#exit', el).onclick = () => { if (!mapMoving) exitRift(); };
   $('#wt', el).onclick = waitPhase;
   mapMoving = false;
   view.showMapChar(UNITS[run.main].kind);
@@ -577,13 +610,13 @@ function infoPanel() {
     <div class="rlist">${M.RELIC_KEYS.map(k => `<div class="rl">${relicIcon(k, meta.grades[k] || 0)}<b>${M.RELIC_DEF[k].name}</b><span>${meta.relics[k]}단계</span></div>`).join('')}</div>
     <div class="sec">파티 능력치</div>
     ${run.units.map(u => { const st = G.computeStats(run, u), U = UNITS[u.key], t = G.unitTier(run, u), D = G.unitDef(u.key);
-      const extra = U.kind === 'dh' ? `<span>건 스탠스 순환 <b>${t >= 3 ? '해금' : '잠김'}</b></span><span>각성기 <b>${t >= 4 ? '해금' : '잠김'}</b></span>`
+      const extra = U.kind === 'dh' ? `<span>건 스탠스 순환 <b>${t >= 2 ? '해금' : '잠김'}</b></span>`
         : (U.kind === 'bk' ? `<span>수라결 <b>${t >= 3 ? '해금' : '잠김'}</b></span>` : '') + `<span>마나 <b>${D.mana} (공격당 +${D.manaPerHit})</b></span><span>사거리 <b>${D.rangeCells}칸</b></span>`;
       return `<div class="sec2">${U.name} <small>Lv.${u.level}</small></div><div class="stats">
       <span>최대 체력 <b>${st.maxHp.toLocaleString()}</b></span><span>${atkName(u.key)} <b>${Math.round(st.atk)}</b></span>
       <span>치명타 <b>${Math.round(st.crit * 100)}%</b></span><span>치명 피해 <b>${Math.round(st.critDmg * 100)}%</b></span>
       <span>피해 <b>+${Math.round((st.dmgMul - 1) * 100)}%</b></span><span>스킬 피해 <b>+${Math.round(st.skillDmg * 100)}%</b></span>
-      <span>트라이포드 <b>${U.cls ? (t >= 2 ? st.tripod + '단' : '잠김') : '-'}</b></span>${extra}</div>`; }).join('')}
+      ${extra}</div>`; }).join('')}
     <div class="mrow"><button class="btn" id="c">닫기</button></div>`, 'wide');
   $('#c', m).onclick = () => { closeModal(); if (mode === 'map') showMap(); };
 }
@@ -847,7 +880,7 @@ function tick(now) {
   document.querySelectorAll('.bb').forEach(el => {
     const b = battle.units.find(u => u.id === +el.dataset.id); if (!b) return;
     if (b.shared && b.shared.merged && !b.alive && b.hp > 0) { el.style.display = 'none'; return; } // 합체로 사라진 개체
-    const nm = el.querySelector('.bbn'); if (nm && nm.dataset.n !== b.name) { nm.dataset.n = b.name; nm.innerHTML = `${b.name}<small>${b.desc || ''}</small>`; el.classList.toggle('merged', b.pattern === 'merged'); }
+    const nm = el.querySelector('.bbn'); if (nm && nm.dataset.n !== b.name) { nm.dataset.n = b.name; nm.textContent = b.name; /* 패턴 설명은 표시하지 않음 */ el.classList.toggle('merged', b.pattern === 'merged'); }
     el.querySelector('.bbh i').style.width = Math.max(0, b.hp / b.maxHp * 100) + '%';
     let g = '';
     if (b.pattern === 'gauge' || b.pattern === 'master') g = `광역 게이지 ${Math.round(b.gauge * 100)}%`;
@@ -1202,7 +1235,7 @@ function nextFloor() {
 }
 
 function gameOver(cleared) {
-  mode = 'over'; view.active = false; hud.innerHTML = '';
+  mode = 'over'; view.active = false; hud.innerHTML = ''; clearSave(); // 런이 끝나면 저장 삭제
   const reached = cleared ? G.MAX_FLOOR : run.floor;
   const sc = G.score(run);
   const secs = Math.round((Date.now() - run.startTime) / 1000);
@@ -1229,7 +1262,7 @@ function gameOver(cleared) {
   } catch (e) { ld.querySelector('span').textContent = '에셋 로드 실패: ' + e.message; console.error(e); return; }
   ld.remove();
   charSelect();
-  window.__rift = { get run() { return run; }, get battle() { return battle; }, view, G, M, startBattle, showMap, title, enterRoom, mainMenu, paradise, charSelect, fieldScreen, riftSetup, relicUI, waitPhase, recruitRoom: () => recruitRoom(), reward: () => endBattle("win"), shopRoom: () => shopRoom(), nextFloor: () => nextFloor(), showUnitInfo: (x, y) => showUnitInfo(x, y), gameOver: (c) => gameOver(c), recruitUI: (p) => recruitUI(p, k => unitDesc(k)), INANNA: INANNA_DEF, AZENA: AZENA_DEF };
+  window.__rift = { get run() { return run; }, get battle() { return battle; }, view, G, M, startBattle, showMap, title, enterRoom, mainMenu, paradise, charSelect, fieldScreen, riftSetup, relicUI, waitPhase, recruitRoom: () => recruitRoom(), reward: () => endBattle("win"), shopRoom: () => shopRoom(), nextFloor: () => nextFloor(), showUnitInfo: (x, y) => showUnitInfo(x, y), gameOver: (c) => gameOver(c), exitRift: () => exitRift(), fieldScreen: () => fieldScreen(), recruitUI: (p) => recruitUI(p, k => unitDesc(k)), INANNA: INANNA_DEF, AZENA: AZENA_DEF };
   document.title = '차원의 균열 시뮬레이터';
   window.__ready = true;
 })();

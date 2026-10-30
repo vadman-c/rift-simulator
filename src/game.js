@@ -133,12 +133,17 @@ export function computeStats(run, u = run.unit) {
   s.healMul *= 1 + A.healRecv / 100; s.takenMul *= 1 - A.taken / 100; hpPct += A.hp; s.manaGain += A.manaGain / 100;
   dmgPct += A.dmg + (magU ? A.magDmg : A.physDmg);
   s.castSpd = A.castSpd / 100; s.shieldRecv = A.shieldRecv / 100; s.manaRegen = A.manaRegen; s.lifesteal = A.lifesteal / 100; s.manaPlus += A.manaHit;
+  // 클래스 해금 효과 (2026-10-31 3차)
+  if (run.units?.some(x => UNITS[x.key].kind === 'dh')) s.crit += 0.10;                         // 데빌헌터 1700: 파티 전체 치명타 확률 +10%
+  const ck = UNITS[u.key].kind, ct = UNITS[u.key].cls ? unitTier(run, u) : 0;
+  if (ck === 'dh' && ct >= 3) { s.critDmg += 0.25; s.atkSpd += 0.10; s.castSpd += 0.10; }       // 데빌헌터 1750: 치명타 피해 +25% · 공격·스킬 속도 +10%
+  if (run.units?.some(x => ['sr', 'bk'].includes(UNITS[x.key].kind))) dmgPct += 6;            // 소서리스·브레이커 1700: 파티 전체 피해량 +6% (둘 다 있어도 1번만)
   s.atk *= 1 + eqAtk;
   s.maxHp = Math.round(s.maxHp * (1 + hpPct / 100));
   s.dmgMul *= 1 + dmgPct / 100;
   s.crit = Math.min(1, s.crit);
   // 트라이포드: 1730 해금 시 레벨 3/5/7마다 스킬 +15%
-  s.tripod = unitTier(run, u) >= 2 && UNITS[u.key].kind === 'dh' ? [3, 5, 7].filter(l => u.level >= l).length : 0; // 데빌헌터 트라이포드
+  s.tripod = 0; // 데빌헌터 트라이포드는 2026-10-31 3차에 삭제
   s.skillMul = 1 + 0.15 * s.tripod;
   if (UNITS[u.key].kind === 'sr' && unitTier(run, u) >= 2) s.skillMul += SR.skill.perLevel1730 * u.level; // 소서리스 1730: 균열 레벨당 종말의 날 +5%
   return s;
@@ -156,7 +161,7 @@ export function makeAlly(run, u = run.unit, id = 1) {
     castSpd: s.castSpd, shieldRecv: s.shieldRecv, manaRegen: s.manaRegen, lifesteal: s.lifesteal,
     shield: s.maxHp * s.shieldStart, speed: D.base.speed, rad: 0.45, mana: 0, int: 1, x: p.x, z: p.z,
   };
-  if (kind === 'dh') Object.assign(c, { dh: true, noMana: true, canShotgun: tier >= 3, awake: tier >= 4, maxMana: 100, ranged: true, range: DH.pistol.range });
+  if (kind === 'dh') Object.assign(c, { dh: true, noMana: true, canShotgun: tier >= 2, awake: false, maxMana: 100, ranged: true, range: DH.pistol.range });
   else Object.assign(c, { def: D, maxMana: D.mana, manaPerHit: D.manaPerHit, ranged: D.rangeCells > 1, range: D.rangeCells * CELL - (D.rangeCells <= 1 ? 1.0 : 0), skill: 'seq', mag: isMag(u.key), healer: !!D.healer });
   if (kind === 'bk') Object.assign(c, { ident: true, idg: 0, wave: tier >= 2, asuraPlus: tier >= 3 }); // 수라결 게이지(항상) · 1730 징벌의 파도(마나) · 1750 수라결 +2초
   if (kind === 'sr') c.shards = tier >= 3; // 1750 운석 파편

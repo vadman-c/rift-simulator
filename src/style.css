@@ -460,3 +460,6 @@ button.li { cursor: pointer; } button.li:hover:not(:disabled) { background: #332
 .sc-h { font-size: 15px; margin-bottom: 4px; } .sc-h b { color: #ffd166; font-size: 20px; margin-left: 6px; }
 .sc-r { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; border-top: 1px solid #ffffff10; } .sc-r small { color: #8a93a5; margin-left: 4px; } .sc-r b { font-variant-numeric: tabular-nums; }
 .rc-rar { display: block; font-size: 13px; letter-spacing: 1px; margin: 1px 0 3px; text-shadow: 0 0 6px currentColor; } .rc-rar small { font-size: 10px; color: #9aa3b5; letter-spacing: 0; margin-left: 4px; text-shadow: none; }
+.mbtns .exitb { border-color: #ff9a8a80; color: #ffb0a0; }
+.title .cont { display: flex; flex-direction: column; align-items: center; gap: 2px; } .title .cont small { font-size: 12px; opacity: .85; font-weight: 400; }
+.pcard .pcont { display: block; margin-top: 4px; font-style: normal; font-size: 12px; color: #7ee08a; }

@@ -31,10 +31,10 @@ export const DH = {
   awake: { name: '각성기 · 버스트', clip: 'sk_quickshot', dur: 1.6, hitAt: 0.7, mult: 7, radius: 4 },
 };
 export const DH_TIERS = [
-  { ilvl: 1700, text: '핸드건 · 잔혹한 추적자 (핸드건 고정)' },
-  { ilvl: 1730, text: '트라이포드 (레벨 3/5/7에서 각성기 강화)' },
-  { ilvl: 1750, text: '아이덴티티 · 건 스탠스 순환 (핸드건 5 → 샷건 3 → 라이플 2)' },
-  { ilvl: 1770, text: '각성기' },
+  // 2026-10-31 3차 개편: 트라이포드·각성기 삭제, 스탠스 순환을 1730으로
+  { ilvl: 1700, text: '핸드건 · 잔혹한 추적자 · 파티 전체 치명타 확률 +10%' },
+  { ilvl: 1730, text: '아이덴티티 · 건 스탠스 순환 (핸드건 5 → 샷건 3 → 라이플 2)' },
+  { ilvl: 1750, text: '치명타 피해 +25% · 공격·스킬 속도 +10%' },
 ];
 export const TIERS = DH_TIERS; // 하위 호환
 export function tierOf(ilvl) {
@@ -56,7 +56,7 @@ export const SR = {
   idle: 'idle_battle_1', run: 'run_battle_1',
 };
 export const SR_TIERS = [
-  { ilvl: 1700, text: '에너지 방출 + 종말의 날' },
+  { ilvl: 1700, text: '에너지 방출 + 종말의 날 · 파티 전체 피해량 +6%' },
   { ilvl: 1730, text: '종말의 날 피해 +5% × 균열 레벨' },
   { ilvl: 1750, text: '종말의 날 후 운석 파편 4개 (1·5·7·11시 방향, 1.5×1.5칸 150%)' },
   { ilvl: 1770, text: '각성기 (미정)' },
@@ -99,7 +99,7 @@ export const BK = {
   idle: 'idle_battle_1', run: 'run_battle_1',
 };
 export const BK_TIERS = [
-  { ilvl: 1700, text: '기본 공격 + 수라결 (수라결 게이지 100: 기본 공격 +10 · 징벌의 파도 +30)' },
+  { ilvl: 1700, text: '기본 공격 + 수라결 (수라결 게이지 100: 기본 공격 +10 · 징벌의 파도 +30) · 파티 전체 피해량 +6%' },
   { ilvl: 1730, text: '징벌의 파도 (마나 30 가득 차면 전방 5타)' },
   { ilvl: 1750, text: '수라결 지속 시간 +2초' },
   { ilvl: 1770, text: '각성기 (미정)' },
@@ -129,7 +129,7 @@ export const BD_TIERS = [
 // ───────── 동료 NPC: 페데리코 (옵시디언 '동료 NPC 종류': 희귀도 4 · 체력 1800 · 공격력 125 · 마나 60 · 사거리 4) ─────────
 // 기본 공격: att_battle_1_01 모션 그대로. 스킬 '천둥 포격'(예시 영상: 하늘에서 금빛 번개 창이 대각선으로 연달아 내리꽂히고 마지막에 큰 폭발 · 보호막 파괴)
 export const FEDERICO = {
-  name: '페데리코', npc: true, rarity: 4,
+  name: '페데리코', npc: true, rarity: 4, dmgType: 'mag', // 2026-10-31 3차: 마법 계열
   base: { hp: 1800, atk: 125, crit: 0.12, critDmg: 1.8, speed: 3.2 },
   mana: 60, manaPerHit: 5, rangeCells: 4,
   basic: { segs: [ { clip: 'att_battle_1_01', dur: 2.0, hits: [[0.8, 1.0], [1.6, 1.0]] } ] },
@@ -255,7 +255,7 @@ export const UNITS = {
   Silian:      { kind: 'silian', name: '실리안', npc: true, esther: true, img: 'img/T_Npc_Silian.png', dmg: '물리', role: '근접 딜러' },
   Lahart:      { kind: 'lahart', name: '라하르트', npc: true, img: 'img/T_Npc_Lahart.png', dmg: '물리', role: '탱커' },
   Azena:       { kind: 'azena', name: '아제나·이난나', npc: true, esther: true, img: 'img/T_Npc_AzenaInanna.png', dmg: '마법', role: '원거리 딜러·힐러' },
-  Federico:    { kind: 'federico', name: '페데리코', npc: true, img: 'img/T_Npc_Federico.png', dmg: '물리', role: '원거리 딜러' },
+  Federico:    { kind: 'federico', name: '페데리코', npc: true, img: 'img/T_Npc_Federico.png', dmg: '마법', role: '원거리 딜러' },
   Aman:        { kind: 'aman', name: '아만', npc: true, img: 'img/T_Npc_Aman.png', dmg: '마법', role: '힐러/버퍼' },
   Neria:       { kind: 'neria', name: '네리아', npc: true, img: 'img/T_Npc_Neria.png', dmg: '마법', role: '힐러' },
 };
@@ -435,7 +435,7 @@ export const DEEP_BOSSES = {
   9: [{ name: '균열의 주인', model: 'Valtan', tint: 0xff6060, h: 4.8, pattern: 'master', desc: '7제단의 힘을 모두 쓴다' }],
 };
 
-export const FLOOR_ZONE = (f) => ({ 1: '외곽 · 검은 산', 2: '마수군단의 숲', 3: '부활한 마수의 심장' }[f] || '심층 · 균열의 핵');
+export const FLOOR_ZONE = (f) => ({ 1: '루테란 동부', 2: '검은 숲', 3: '부활한 마수의 심장' }[f] || '심층 · 균열의 핵');
 
 // 심화 단계 효과 (구현된 항목만 효과가 있다)
 export const ASCENSION = [
